@@ -37,7 +37,7 @@ TODO: Add long description of the pod here.
   # }
 
   # s.public_header_files = 'Pod/Classes/**/*.h'
-  # s.frameworks = 'UIKit', 'MapKit'
+#  s.frameworks = 'CommonCrypto'
   # s.dependency 'AFNetworking', '~> 2.3'
   
   s.dependency 'Moya/RxSwift', '~> 14.0'
@@ -45,5 +45,6 @@ TODO: Add long description of the pod here.
   s.dependency 'Alamofire', '~> 5.2'
   s.dependency 'ObjectMapper', '~> 3.4'
   s.dependency 'KeychainSwift', '~> 19.0'
+  s.dependency 'JWTDecode', '~> 2.4'
   
 end

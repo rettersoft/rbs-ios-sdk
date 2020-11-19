@@ -4,7 +4,7 @@ import RxSwift
 import Moya
 import KeychainSwift
 import ObjectMapper
-
+import JWTDecode
 
 public enum RBSClientType {
     case user(userType:String), service(secretKey:String)
@@ -21,8 +21,25 @@ struct RBSTokenData : Mappable {
     var uid: String?
     var accessToken: String?
     var refreshToken: String?
-    var accessTokenTimestamp: Date?
-    var refreshTokenTimestamp: Date?
+
+    var accessTokenExpiresAt: Date? {
+        get {
+            guard let accessToken = self.accessToken else { return nil }
+            
+            let jwt = try! decode(jwt: accessToken)
+            return jwt.expiresAt
+        }
+    }
+    
+    var refreshTokenExpiresAt: Date? {
+        get {
+            guard let token = self.refreshToken else { return nil }
+            
+            let jwt = try! decode(jwt: token)
+            return jwt.expiresAt
+        }
+    }
+    
     
     init?(map: Map) {
         
@@ -103,7 +120,7 @@ public class RBS {
 //        keychain.set(data, forKey: RBSKeychainKey.token.keyName)
         
         
-        keychain.delete(RBSKeychainKey.token.keyName)
+//        keychain.delete(RBSKeychainKey.token.keyName)
         
         let incomingAction = commandQueueSubject
             .asObservable()
@@ -112,46 +129,76 @@ public class RBS {
         
         // STORED TOKEN
         let storedToken = tokenData
-            .filter { tokenData -> Bool in
+            .filter { [weak self] tokenData -> Bool in
+                guard let now = self?.safeNow else { return false }
                 guard let tokenData = tokenData,
                       let _ = tokenData.accessToken,
-                      let refreshTimestamp = tokenData.refreshTokenTimestamp,
-                      let accessTimestamp = tokenData.accessTokenTimestamp else { return false }
-                let now = Date()
-                if refreshTimestamp < now && accessTimestamp < now { return true }
+                      let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
+                      let accessTokenExpiresAt = tokenData.accessTokenExpiresAt else { return false }
+                
+                if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
+                    return true
+                    
+                }
                 return false
             }
             .map { $0! }
         
         
+        
+        
+        
+        
         // REFRESH TOKEN
         let refreshTokenReq = tokenData
-            .filter { tokenData -> Bool in
-                
+            .filter { [weak self] tokenData -> Bool in
+                guard let now = self?.safeNow else { return false }
                 guard let tokenData = tokenData,
-                      let refreshTimestamp = tokenData.refreshTokenTimestamp,
-                      let accessTimestamp = tokenData.accessTokenTimestamp else { return false }
-                let now = Date()
-                if refreshTimestamp > now { return false }
-                if accessTimestamp > now { return false }
-                return true
+                      let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
+                      let accessTokenExpiresAt = tokenData.accessTokenExpiresAt else { return false }
+                
+                if refreshTokenExpiresAt > now && accessTokenExpiresAt < now { return true }
+                return false
             }
+            .map({ tokenData -> RefreshTokenRequest in
+                let req = RefreshTokenRequest()
+                req.refreshToken = tokenData?.refreshToken
+                return req
+            })
+            .flatMapLatest { [weak self] req in
+                
+                self!.service.rx.request(.refreshToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
+            }
+        
+        let refreshTokenReqResp = refreshTokenReq
+            .compactMap{ $0.element }
            
+        let refreshedToken = refreshTokenReqResp
+            .map { (tokenResponse) -> RBSTokenData? in
+                tokenResponse.tokenData
+            }
+            .filter { $0 != nil }
+            .map { $0! }
+        
+        
+        
+        
         
         // GET A NEW ANONYM TOKEN
         let getAnonymTokenReq = tokenData
-            .filter { tokenData -> Bool in
+            .filter { [weak self] tokenData -> Bool in
+                
+                guard let now = self?.safeNow else { return false }
+                
                 guard let tokenData = tokenData,
-                      let refreshTimestamp = tokenData.refreshTokenTimestamp else {
+                      let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt else {
                     // No token data, get anonym token
                     return true
                 }
                 
-                let now = Date()
+                if refreshTokenExpiresAt > now { return false }
                 
-                if refreshTimestamp > now { return true }
-                
-                return false
+                return true
             }
             .flatMapLatest { [weak self] tokenData in
                 self!.service.rx.request(.getAnonymToken(request: GetAnonymTokenRequest())).map(GetTokenResponse.self).asObservable().materialize()
@@ -159,7 +206,6 @@ public class RBS {
         
         let getAnonymTokenReqResp = getAnonymTokenReq
             .compactMap{ $0.element }
-            
             
         let getAnonymTokenReqRespError = getAnonymTokenReq.compactMap { $0.error?.localizedDescription }
 
@@ -171,8 +217,13 @@ public class RBS {
             .map { $0! }
             
         
+        
+        
+        
+        
+        
         let token = Observable
-            .merge([storedToken, anonymToken])
+            .merge([storedToken, anonymToken, refreshedToken])
             .do(onNext: { [weak self] tokenData in
                 self?.saveTokenData(tokenData: tokenData)
             })
@@ -210,6 +261,12 @@ public class RBS {
             .disposed(by: disposeBag)
     }
     
+    private var safeNow:Date {
+        get {
+            return Date(timeIntervalSinceNow: 30)
+        }
+    }
+    
     private func saveTokenData(tokenData:RBSTokenData) {
         let obj = Mapper<RBSTokenData>().toJSON(tokenData)
         let data = try! JSONSerialization.data(withJSONObject: obj, options: .prettyPrinted)
@@ -220,7 +277,6 @@ public class RBS {
         return self.service.rx.request(.getAnonymToken(request: GetAnonymTokenRequest())).map(GetTokenResponse.self)
     }
 
-    
     private func getTokenData() -> Observable<RBSTokenData?> {
         
         return Observable<RBSTokenData?>.create { (observer) -> Disposable in

@@ -34,6 +34,9 @@
     ],
     "KeychainSwift": [
       "~> 19.0"
+    ],
+    "JWTDecode": [
+      "~> 2.4"
     ]
   }
 }

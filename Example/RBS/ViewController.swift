@@ -11,10 +11,12 @@ import RBS
 
 class ViewController: UIViewController {
 
+    let rbs = RBS(clientType: .user(userType: ""))
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let rbs = RBS(clientType: .user(userType: ""))
+        
         
         try! rbs.send(action: "rbs.oms.request.CREATE_ORDER",
                       data: ["":""],
@@ -31,5 +33,17 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
+    @IBAction func testButtonTapped(_ sender: Any) {
+        
+        try! rbs.send(action: "rbs.oms.request.CREATE_ORDER",
+                      data: ["":""],
+                      onSuccess: { result in
+                        print("Result: \(result)")
+                      },
+                      onError: { error in
+                        
+                      })
+        
+    }
 }
 

@@ -16,11 +16,13 @@ enum RBSService {
     
     case getAnonymToken(request: GetAnonymTokenRequest)
     case executeAction(request: ExecuteActionRequest)
+    case refreshToken(request: RefreshTokenRequest)
     
     var endPoint: String {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
         case .executeAction(_): return "/executeAction"
+        case .refreshToken(_): return "/public/refresh-token"
         }
     }
     
@@ -28,6 +30,7 @@ enum RBSService {
         switch self {
         case .getAnonymToken(_): return ["projectId":"7b7ecec721d54629bed1d3b1aec210e8", "clientId": "rbs.user.enduser"] //Mapper().toJSON(request)
         case .executeAction(_): return [:]
+        case .refreshToken(_): return [:]
         }
     }
     
@@ -45,6 +48,7 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
         switch self {
         case .getAnonymToken(_): return .none
         case .executeAction(_): return .none
+        case .refreshToken(_): return .none
         }
     }
     
@@ -62,6 +66,8 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     var task: Task {
         switch self {
         case .getAnonymToken(_):
+            return .requestParameters(parameters: self.parameters, encoding: URLEncoding.default)
+        case .refreshToken(_):
             return .requestParameters(parameters: self.parameters, encoding: URLEncoding.default)
         case .executeAction(_):
             return .requestParameters(parameters: self.parameters, encoding: JSONEncoding.default)

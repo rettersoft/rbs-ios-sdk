@@ -24,6 +24,21 @@ class GetAnonymTokenRequest : Mappable {
     }
 }
 
+class RefreshTokenRequest : Mappable {
+
+    var refreshToken: String?
+    
+    required init?(map: Map) { }
+    
+    init() {
+    
+    }
+    
+    func mapping(map: Map) {
+        refreshToken <- map["refreshToken"]
+    }
+}
+
 class ExecuteActionRequest : Mappable {
     
     var accessToken:String?
