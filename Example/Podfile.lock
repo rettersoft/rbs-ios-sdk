@@ -1,0 +1,43 @@
+PODS:
+  - Alamofire (5.4.0)
+  - KeychainSwift (19.0.0)
+  - Moya/Core (14.0.0):
+    - Alamofire (~> 5.0)
+  - Moya/RxSwift (14.0.0):
+    - Moya/Core
+    - RxSwift (~> 5.0)
+  - ObjectMapper (3.5.3)
+  - RBS (0.1.0):
+    - Alamofire (~> 5.2)
+    - KeychainSwift (~> 19.0)
+    - Moya/RxSwift (~> 14.0)
+    - ObjectMapper (~> 3.4)
+    - RxSwift (~> 5)
+  - RxSwift (5.1.1)
+
+DEPENDENCIES:
+  - RBS (from `../`)
+
+SPEC REPOS:
+  trunk:
+    - Alamofire
+    - KeychainSwift
+    - Moya
+    - ObjectMapper
+    - RxSwift
+
+EXTERNAL SOURCES:
+  RBS:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  Alamofire: 3b6a534a3df22db367e4dedeeca73d1ddfcf0e2f
+  KeychainSwift: a06190cf933ad46b1e0abc3d77d29c06331715c7
+  Moya: 5b45dacb75adb009f97fde91c204c1e565d31916
+  ObjectMapper: 97111c97e054a6ee25917662106689f0b4127b37
+  RBS: eb0fa591631eadb112dde66fb807a1d40dfc2dce
+  RxSwift: 81470a2074fa8780320ea5fe4102807cb7118178
+
+PODFILE CHECKSUM: 5f1ae693af7fc58179c8f35b6e576d08e30f30be
+
+COCOAPODS: 1.10.0

@@ -9,7 +9,7 @@
 Pod::Spec.new do |s|
   s.name             = 'RBS'
   s.version          = '0.1.0'
-  s.summary          = 'A short description of RBS.'
+  s.summary          = 'RBS iOS SDK.'
 
 # This description is used to generate tags and improve search results.
 #   * Think: What does it do? Why did you write it? What is the focus?
@@ -28,7 +28,7 @@ TODO: Add long description of the pod here.
   s.source           = { :git => 'https://github.com/baranbaygan/RBS.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
-  s.ios.deployment_target = '8.0'
+  s.ios.deployment_target = '10.0'
 
   s.source_files = 'RBS/Classes/**/*'
   
@@ -39,4 +39,11 @@ TODO: Add long description of the pod here.
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
+  
+  s.dependency 'Moya/RxSwift', '~> 14.0'
+  s.dependency 'RxSwift', '~> 5'
+  s.dependency 'Alamofire', '~> 5.2'
+  s.dependency 'ObjectMapper', '~> 3.4'
+  s.dependency 'KeychainSwift', '~> 19.0'
+  
 end

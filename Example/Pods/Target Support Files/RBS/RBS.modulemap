@@ -1,0 +1,6 @@
+framework module RBS {
+  umbrella header "RBS-umbrella.h"
+
+  export *
+  module * { export * }
+}

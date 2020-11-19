@@ -7,12 +7,23 @@
 //
 
 import UIKit
+import RBS
 
 class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        
+        let rbs = RBS(clientType: .user(userType: ""))
+        
+        try! rbs.send(action: "rbs.oms.request.CREATE_ORDER",
+                      data: ["":""],
+                      onSuccess: { result in
+                        print("Result: \(result)")
+                      },
+                      onError: { error in
+                        
+                      })
     }
 
     override func didReceiveMemoryWarning() {
