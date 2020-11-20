@@ -82,7 +82,7 @@ Actions are unique strings to call a service on RBS. Actions have 4 parts separa
 
 {COMPANY}.{SERVICE_ID}.{ACTION_TYPE}.{ACTION_NAME}
 
-Action Types can only be “event” or “request”
+Action Type can only be “event” or “request”.
 
 Some examples:
 
@@ -106,10 +106,6 @@ rbs.send(action: "rbs.oms.request.SOME_ACTION",
             print("Error Result: \(error)")
          })
 ```
-
-## Author
-
-baranbaygan, baran@rettermobile.com
 
 ## License
 
