@@ -20,16 +20,25 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ruk-LR-27Y">
-                                <rect key="frame" x="136" y="318" width="102" height="30"/>
+                                <rect key="frame" x="136.5" y="318.5" width="102" height="30"/>
                                 <state key="normal" title="Execute Action"/>
                                 <connections>
                                     <action selector="testButtonTapped:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="2aH-9J-eNY"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Mhp-Ys-8In">
+                                <rect key="frame" x="159" y="356" width="57" height="30"/>
+                                <state key="normal" title="Sign out"/>
+                                <connections>
+                                    <action selector="signoutTapped:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="dEh-Y5-lSG"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
+                            <constraint firstItem="Mhp-Ys-8In" firstAttribute="centerX" secondItem="ruk-LR-27Y" secondAttribute="centerX" id="J98-ah-Jwn"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerY" secondItem="kh9-bI-dsS" secondAttribute="centerY" id="JHh-ep-dbg"/>
+                            <constraint firstItem="Mhp-Ys-8In" firstAttribute="top" secondItem="ruk-LR-27Y" secondAttribute="bottom" constant="7.5" id="Zkz-L8-7V4"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerX" secondItem="kh9-bI-dsS" secondAttribute="centerX" id="u8w-hQ-mpl"/>
                         </constraints>
                     </view>

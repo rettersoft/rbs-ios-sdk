@@ -22,7 +22,7 @@ enum RBSService {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
         case .executeAction(_): return "/executeAction"
-        case .refreshToken(_): return "/public/refresh-token"
+        case .refreshToken(_): return "/public/auth-refresh"
         }
     }
     
@@ -30,7 +30,7 @@ enum RBSService {
         switch self {
         case .getAnonymToken(_): return ["projectId":"7b7ecec721d54629bed1d3b1aec210e8", "clientId": "rbs.user.enduser"] //Mapper().toJSON(request)
         case .executeAction(_): return [:]
-        case .refreshToken(_): return [:]
+        case .refreshToken(let request): return ["refreshToken":request.refreshToken!]
         }
     }
     

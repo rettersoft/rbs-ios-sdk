@@ -26,6 +26,9 @@ class ViewController: UIViewController {
                       onError: { error in
                         
                       })
+        
+        
+        rbs.delegate = self
     }
 
     override func didReceiveMemoryWarning() {
@@ -45,5 +48,16 @@ class ViewController: UIViewController {
                       })
         
     }
+    @IBAction func signoutTapped(_ sender: Any) {
+        rbs.signOut()
+    }
 }
+
+extension ViewController : RBSClientDelegate {
+    func rbsClient(client: RBS, authStatusChanged toStatus: RBSClientAuthStatus) {
+        print("RBS authStatusChanged to \(toStatus)")
+    }
+}
+
+
 
