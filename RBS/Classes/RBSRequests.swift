@@ -58,7 +58,7 @@ class ExecuteActionRequest : Mappable {
     
     var accessToken:String?
     var actionName:String?
-    var payload:String?
+    var payload: [String:Any]?
     
     
     required init?(map: Map) { }

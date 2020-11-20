@@ -22,18 +22,37 @@ enum RBSService {
     var endPoint: String {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
-        case .executeAction(_): return "/executeAction"
+        case .executeAction(_): return "/user-action"
         case .refreshToken(_): return "/public/auth-refresh"
         case .authWithCustomToken(_): return "/public/auth"
         }
     }
     
-    var parameters: [String: Any] {
+    var body: [String:Any] {
+        switch self {
+        case .executeAction(let request):
+            if let payload = request.payload {
+                return payload
+            }
+            return [:]
+        default: return [:]
+        }
+    }
+    
+    var urlParameters: [String: Any] {
         switch self {
         case .getAnonymToken(_): return ["projectId":"7b7ecec721d54629bed1d3b1aec210e8", "clientId": "rbs.user.enduser"] //Mapper().toJSON(request)
-        case .executeAction(_): return [:]
         case .refreshToken(let request): return ["refreshToken":request.refreshToken!]
         case .authWithCustomToken(let request): return ["customToken": request.customToken!]
+        case .executeAction(let request):
+            if let accessToken = request.accessToken, let action = request.actionName {
+                return [
+                    "auth": accessToken,
+                    "action": action
+                ]
+            } else {
+                return [:]
+            }
         }
     }
     
@@ -47,12 +66,10 @@ enum RBSService {
 
 
 extension RBSService: TargetType, AccessTokenAuthorizable {
+    
     var authorizationType: AuthorizationType? {
         switch self {
         default: return .none
-//        case .getAnonymToken(_): return .none
-//        case .executeAction(_): return .none
-//        case .refreshToken(_): return .none
         }
     }
     
@@ -70,18 +87,27 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     var task: Task {
         switch self {
         case .executeAction(_):
-            return .requestParameters(parameters: self.parameters, encoding: JSONEncoding.default)
+            return .requestCompositeParameters(bodyParameters: self.body,
+                                               bodyEncoding: JSONEncoding.default,
+                                               urlParameters: self.urlParameters)
         default:
-            return .requestParameters(parameters: self.parameters, encoding: URLEncoding.default)
+            return .requestParameters(parameters: self.urlParameters, encoding: URLEncoding.default)
         }
     }
     var headers: [String : String]? {
         
         var headers: [String: String] = [:]
-//        headers["Content-Type"] = "application/json"
-        headers["OperationChannel"] = "ios"
-//        headers["ClientVersion"] = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        headers["Content-Type"] = "application/json"
+        headers["x-rbs-sdk-client"] = "ios"
 
+        switch self {
+        case .executeAction:
+            headers["Content-Type"] = "application/json"
+            break
+        default:
+            break
+        }
+        
         return headers
     }
 }

@@ -80,7 +80,7 @@ enum RBSError : Error {
 class RBSAction {
     var tokenData:RBSTokenData?
     
-    var successCompletion: ((_ result:String) -> Void)?
+    var successCompletion: ((_ result:[String:Any]) -> Void)?
     var errorCompletion: ((_ error:Error) -> Void)?
     var action: String?
     var data: [String:Any]?
@@ -126,7 +126,29 @@ public class RBS {
             
         }
     }
-    var service:MoyaProvider<RBSService>!
+    
+    var _service:MoyaProvider<RBSService>?
+    var service:MoyaProvider<RBSService>
+    {
+        get {
+            if self._service != nil {
+                return self._service!
+            }
+            
+            let accessTokenPlugin = AccessTokenPlugin { _ -> String in
+                if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
+                    let json = try! JSONSerialization.jsonObject(with: data, options: [])
+                    if let tokenData = Mapper<RBSTokenData>().map(JSONObject: json), let accessToken = tokenData.accessToken {
+                        return accessToken
+                    }
+                }
+                return ""
+            }
+            self._service = MoyaProvider<RBSService>(plugins: [ CachePolicyPlugin(), accessTokenPlugin ])
+            return self._service!
+        }
+    }
+    
     var disposeBag:DisposeBag
     let keychain = KeychainSwift()
     
@@ -136,10 +158,7 @@ public class RBS {
     public init(clientType:RBSClientType) {
         self.clientType = clientType
         self.disposeBag = DisposeBag()
-        
-        self.service = MoyaProvider<RBSService>(plugins: [ CachePolicyPlugin() ])
-        
-        
+
         let authWithCustomTokenReq = authWithCustomTokenQueueSubject
             .asObservable()
             .do(onNext: { [weak self] _ in
@@ -301,6 +320,7 @@ public class RBS {
         // FINALLY EXECUTE THE ACTION
         let executeActionReq = Observable
             .zip(incomingAction, token)
+            .debug("EXECUTE_DEBUG ZIP", trimOutput: true)
             .map({ (action, tokenData) -> RBSAction in
                 action.tokenData = tokenData
                 return action
@@ -309,21 +329,35 @@ public class RBS {
                 let req = ExecuteActionRequest()
                 req.accessToken = action.tokenData!.accessToken
                 req.actionName = action.action!
-                req.payload = "{'data': 1}"
+                req.payload = action.data
                 return req
             }
             .flatMapLatest { [weak self] req in
-                self!.service.rx.request(.executeAction(request: req)).map(GetTokenResponse.self).asObservable().materialize()
+                self!.service.rx.request(.executeAction(request: req)).catchBaseError().parseJSON().asObservable().materialize()
             }
+            .debug("EXECUTE_DEBUG", trimOutput: true)
+            .share()
         
         let executeActionReqResp = executeActionReq.compactMap{ $0.element }
+        let executeActionReqRespError = executeActionReq.compactMap{ $0.error }
         
         Observable
-            .combineLatest(executeActionReqResp, incomingAction)
+            .zip(executeActionReqRespError, incomingAction)
             .observeOn(MainScheduler.instance)
+            .subscribe(onNext: { (error, action) in
+                if let completion = action.errorCompletion {
+                    completion(error)
+                }
+            })
+            .disposed(by: disposeBag)
+        
+        Observable
+            .zip(executeActionReqResp, incomingAction)
+            .observeOn(MainScheduler.instance)
+            .debug("EXECUTE_DEBUG 2", trimOutput: true)
             .subscribe { (resp, action) in
-                if let completion = action.successCompletion {
-                    completion("DONE")
+                if let completion = action.successCompletion, let resp = resp {
+                    completion(resp)
                 }
             }
             .disposed(by: disposeBag)
@@ -403,7 +437,7 @@ public class RBS {
     
     public func send(action actionName:String,
                      data:[String:Any],
-                     onSuccess: @escaping (_ result:String) -> Void,
+                     onSuccess: @escaping (_ result:[String:Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
         let action = RBSAction()
@@ -412,8 +446,12 @@ public class RBS {
         action.successCompletion = onSuccess
         action.errorCompletion = onError
         self.commandQueueSubject.onNext(action)
+        
     }
 }
+
+
+
 
 
 

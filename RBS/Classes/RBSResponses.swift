@@ -7,7 +7,7 @@
 
 import Foundation
 import Moya
-
+import RxSwift
 
 class GetTokenResponse: Decodable {
     
@@ -34,27 +34,39 @@ class GetTokenResponse: Decodable {
 }
 
 
+class ExecuteActionResponse: Decodable {
+    
+    var accessToken: String?
+    var refreshToken: String?
+    
+    
+    private enum CodingKeys: String, CodingKey { case accessToken, refreshToken }
+    
+    var tokenData:RBSTokenData? {
+        get {
+            if let accessToken = self.accessToken, let refreshToken = self.refreshToken {
+                return RBSTokenData(JSON: [
+                    "isAnonym": true,
+                    "accessToken": accessToken,
+                    "refreshToken": refreshToken
+                ])
+            } else {
+                return nil
+            }
+            
+        }
+    }
+}
+
 
 enum NetworkError : Error {
     case connection_lost
 }
 
 class BaseErrorResponse: Decodable, Error {
-    var code: Int? = 512 // unknown
     
-    var httpStatusCode: Int? = 512 // unknown
-    var displayDialog: Bool {
-        get {
-            guard let httpStatus = self.httpStatusCode else { return false }
-            if httpStatus >= 400 && httpStatus < 500 { return true }
-            
-            guard let code = self.code else { return false }
-            
-            if (0...121).contains(code) || (1000...1021).contains(code) { return true }
-            
-            return false
-        }
-    }
+    var code: Int? // unknown
+    var httpStatusCode: Int? // unknown
     
     private enum CodingKeys: String, CodingKey { case code, message, httpStatusCode }
     
@@ -63,7 +75,6 @@ class BaseErrorResponse: Decodable, Error {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.httpStatusCode = try? container.decode(Int.self, forKey: .httpStatusCode)
             self.code = try? container.decode(Int.self, forKey: .code)
-            
         } catch (let error) {
             print(error)
         }
@@ -73,15 +84,60 @@ class BaseErrorResponse: Decodable, Error {
         
     }
     
-    init(en:String, tr:String, code:Int, displayDialog:Bool) {
-        
-        self.code = code
-        self.httpStatusCode = code
+}
+
+
+
+
+extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
+
+    /// If the Response status code is in the 200 - 299 range, it lets the Response through.
+    /// If it's outside that range, it tries to map the Response into an BaseErrorResponse
+    /// object and throws an error with the appropriate message from BaseErrorResponse.
+    func catchBaseError() -> Single<Element> {
+        return flatMap { response in
+            if (200...299).contains(response.statusCode) {
+                if(response.data.count == 0) {
+                    // Empty respnse but status code is okay
+                    return .just(Element(statusCode: response.statusCode, data: "{}".data(using: .utf8)!))
+                }
+                
+                return .just(response)
+            }
+            
+            if response.statusCode == 401 {
+                // Unauthorized
+            }
+            
+            do {
+                let baseErrorResponse = try response.map(BaseErrorResponse.self)
+                baseErrorResponse.httpStatusCode = response.statusCode
+
+                throw baseErrorResponse
+            }
+            catch let error as BaseErrorResponse {
+              throw error
+            }
+            catch let e {
+                throw e
+            }
+        }
     }
     
-    static func createFakeErrorResponse() -> Response {
-        return Response(statusCode: 475, data: Data())
+    func parseJSON() -> Single<[String:Any]?> {
+        return flatMap { response in
+            
+            do {
+                
+                // make sure this JSON is in the format we expect
+                if let json = try JSONSerialization.jsonObject(with: response.data, options: []) as? [String: Any] {
+                    return .just(json)
+                }
+            } catch let error as NSError {
+                print("Failed to load: \(error.localizedDescription)")
+            }
+            
+            return .just(nil)
+        }
     }
-    
-    
 }
