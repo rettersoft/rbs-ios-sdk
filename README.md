@@ -86,11 +86,11 @@ Action Types can only be “event” or “request”
 
 Some examples:
 
-rbs.oms.request.INSERT_ORDER
-rbs.oms.request.LIST_MY_ORDERS
-rbs.oms.event.ORDER_CREATED
-rbs.notification.request.SEND_SMS
-somecompany.awesomeservice.request.DO_STUFF
+- rbs.oms.request.INSERT_ORDER
+- rbs.oms.request.LIST_MY_ORDERS
+- rbs.oms.event.ORDER_CREATED
+- rbs.notification.request.SEND_SMS
+- somecompany.awesomeservice.request.DO_STUFF
 
 You can use .send method to send actions to RBS services. The list of which actions will trigger which services is listed in your RBS project configuration.
 
