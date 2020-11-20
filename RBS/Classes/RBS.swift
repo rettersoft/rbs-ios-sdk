@@ -95,6 +95,7 @@ class RBSAction {
 public class RBS {
     
     var clientType:RBSClientType
+    var projectId:String!
     
     public var delegate:RBSClientDelegate? {
         didSet {
@@ -155,9 +156,10 @@ public class RBS {
     let commandQueueSubject = PublishSubject<RBSAction>()
     let authWithCustomTokenQueueSubject = PublishSubject<AuthWithCustomTokenRequest>()
     
-    public init(clientType:RBSClientType) {
+    public init(clientType:RBSClientType, projectId: String) {
         self.clientType = clientType
         self.disposeBag = DisposeBag()
+        self.projectId = projectId
 
         let authWithCustomTokenReq = authWithCustomTokenQueueSubject
             .asObservable()
@@ -285,8 +287,13 @@ public class RBS {
                 
                 return true
             }
-            .flatMapLatest { [weak self] tokenData in
-                self!.service.rx.request(.getAnonymToken(request: GetAnonymTokenRequest())).map(GetTokenResponse.self).asObservable().materialize()
+            .map({ [weak self] _ -> GetAnonymTokenRequest in
+                let req = GetAnonymTokenRequest()
+                req.projectId = self!.projectId
+                return req
+            })
+            .flatMapLatest { [weak self] req in
+                self!.service.rx.request(.getAnonymToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
             }
             .share()
         

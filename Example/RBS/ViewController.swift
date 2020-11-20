@@ -13,7 +13,7 @@ class ViewController: UIViewController {
     
     let testCustomToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRJZCI6InJicy51c2VyLmVuZHVzZXIiLCJhbm9ueW1vdXMiOmZhbHNlLCJwcm9qZWN0SWQiOiI3YjdlY2VjNzIxZDU0NjI5YmVkMWQzYjFhZWMyMTBlOCIsInVzZXJJZCI6Im15VXNlcklkMSIsInRpbWVzdGFtcCI6MTYwNTgwOTkwMjAxMiwic2VydmljZUlkIjoidGVzdHNlcnZpY2UiLCJpYXQiOjE2MDU4MDk5MDIsImV4cCI6MTYwNzEwNTkwMn0.O1xaYQzdG7awq_jt5PxrezKTtR7OG4BEa0AxOvpTt60"
     
-    let rbs = RBS(clientType: .user(userType: ""))
+    let rbs = RBS(clientType: .user(userType: ""), projectId: "7b7ecec721d54629bed1d3b1aec210e8")
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,15 +30,11 @@ class ViewController: UIViewController {
     }
     @IBAction func testButtonTapped(_ sender: Any) {
         
-        var subOrders:[[String:Any]] = []
-        subOrders.append(["subOrderId": "subOrder1", "productId": "p1"])
-        subOrders.append(["subOrderId": "subOrder2", "productId": "p2"])
         
-        rbs.send(action: "rbs.oms.request.CREATE_ORDER",
+        
+        rbs.send(action: "rbs.oms.request.SOME_ACTION",
                  data: [
-                    "userId": "user1",
-                    "orderId": "order123",
-                    "subOrders": subOrders
+                    "key": "value",
                  ],
                  onSuccess: { result in
                     print("Result: \(result)")

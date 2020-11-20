@@ -22,7 +22,7 @@ enum RBSService {
     var endPoint: String {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
-        case .executeAction(_): return "/user-action"
+        case .executeAction(_): return "/user/action"
         case .refreshToken(_): return "/public/auth-refresh"
         case .authWithCustomToken(_): return "/public/auth"
         }
@@ -41,7 +41,7 @@ enum RBSService {
     
     var urlParameters: [String: Any] {
         switch self {
-        case .getAnonymToken(_): return ["projectId":"7b7ecec721d54629bed1d3b1aec210e8", "clientId": "rbs.user.enduser"] //Mapper().toJSON(request)
+        case .getAnonymToken(let request): return ["projectId": request.projectId!, "clientId": "rbs.user.enduser"] //Mapper().toJSON(request)
         case .refreshToken(let request): return ["refreshToken":request.refreshToken!]
         case .authWithCustomToken(let request): return ["customToken": request.customToken!]
         case .executeAction(let request):

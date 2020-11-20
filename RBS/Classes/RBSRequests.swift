@@ -10,6 +10,7 @@ import ObjectMapper
 
 class GetAnonymTokenRequest : Mappable {
     
+    var projectId: String?
     
     required init?(map: Map) { }
     
@@ -18,9 +19,7 @@ class GetAnonymTokenRequest : Mappable {
     }
     
     func mapping(map: Map) {
-//        phoneNumber <- map["phoneNumber"]
-//        email <- map["email"]
-//        password <- map["password"]
+        projectId <- map["projectId"]
     }
 }
 
