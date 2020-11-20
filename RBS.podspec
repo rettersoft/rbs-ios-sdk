@@ -21,11 +21,11 @@ Pod::Spec.new do |s|
 TODO: Add long description of the pod here.
                        DESC
 
-  s.homepage         = 'https://github.com/baranbaygan/RBS'
+  s.homepage         = 'https://github.com/rettersoft/rbs-ios-sdk'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'baranbaygan' => 'baran@rettermobile.com' }
-  s.source           = { :git => 'https://github.com/baranbaygan/RBS.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.ios.deployment_target = '10.0'
