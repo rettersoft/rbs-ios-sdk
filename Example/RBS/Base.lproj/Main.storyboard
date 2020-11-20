@@ -33,13 +33,22 @@
                                     <action selector="signoutTapped:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="dEh-Y5-lSG"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Jx2-K1-o55">
+                                <rect key="frame" x="97" y="280" width="181" height="30"/>
+                                <state key="normal" title="Sign in with Custom Token"/>
+                                <connections>
+                                    <action selector="signInWithCustomToken:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="Ybe-z3-JnK"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
+                            <constraint firstItem="ruk-LR-27Y" firstAttribute="top" secondItem="Jx2-K1-o55" secondAttribute="bottom" constant="8.5" id="9QK-lw-Ppj"/>
                             <constraint firstItem="Mhp-Ys-8In" firstAttribute="centerX" secondItem="ruk-LR-27Y" secondAttribute="centerX" id="J98-ah-Jwn"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerY" secondItem="kh9-bI-dsS" secondAttribute="centerY" id="JHh-ep-dbg"/>
                             <constraint firstItem="Mhp-Ys-8In" firstAttribute="top" secondItem="ruk-LR-27Y" secondAttribute="bottom" constant="7.5" id="Zkz-L8-7V4"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerX" secondItem="kh9-bI-dsS" secondAttribute="centerX" id="u8w-hQ-mpl"/>
+                            <constraint firstItem="Jx2-K1-o55" firstAttribute="centerX" secondItem="ruk-LR-27Y" secondAttribute="centerX" id="wTJ-Gt-swH"/>
                         </constraints>
                     </view>
                 </viewController>

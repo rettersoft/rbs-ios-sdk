@@ -39,6 +39,21 @@ class RefreshTokenRequest : Mappable {
     }
 }
 
+class AuthWithCustomTokenRequest : Mappable {
+
+    var customToken: String?
+    
+    required init?(map: Map) { }
+    
+    init() {
+    
+    }
+    
+    func mapping(map: Map) {
+        customToken <- map["customToken"]
+    }
+}
+
 class ExecuteActionRequest : Mappable {
     
     var accessToken:String?

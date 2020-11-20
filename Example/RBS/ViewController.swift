@@ -11,6 +11,8 @@ import RBS
 
 class ViewController: UIViewController {
 
+    let testCustomToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRJZCI6InJicy51c2VyLmVuZHVzZXIiLCJhbm9ueW1vdXMiOmZhbHNlLCJwcm9qZWN0SWQiOiI3YjdlY2VjNzIxZDU0NjI5YmVkMWQzYjFhZWMyMTBlOCIsInVzZXJJZCI6Im15VXNlcklkMSIsInRpbWVzdGFtcCI6MTYwNTgwOTkwMjAxMiwic2VydmljZUlkIjoidGVzdHNlcnZpY2UiLCJpYXQiOjE2MDU4MDk5MDIsImV4cCI6MTYwNzEwNTkwMn0.O1xaYQzdG7awq_jt5PxrezKTtR7OG4BEa0AxOvpTt60"
+    
     let rbs = RBS(clientType: .user(userType: ""))
     
     override func viewDidLoad() {
@@ -18,7 +20,7 @@ class ViewController: UIViewController {
         
         
         
-        try! rbs.send(action: "rbs.oms.request.CREATE_ORDER",
+        rbs.send(action: "rbs.oms.request.CREATE_ORDER",
                       data: ["":""],
                       onSuccess: { result in
                         print("Result: \(result)")
@@ -36,6 +38,9 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
+    @IBAction func signInWithCustomToken(_ sender: Any) {
+        rbs.authenticateWithCustomToken(testCustomToken)
+    }
     @IBAction func testButtonTapped(_ sender: Any) {
         
         try! rbs.send(action: "rbs.oms.request.CREATE_ORDER",

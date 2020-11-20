@@ -54,7 +54,7 @@ struct RBSTokenData : Mappable {
 }
 
 public enum RBSClientAuthStatus {
-    case signedIn(user:RBSUser), signedInAnonymously(user:RBSUser), signedOut
+    case signedIn(user:RBSUser), signedInAnonymously(user:RBSUser), signedOut, authenticating
 }
 
 public protocol RBSClientDelegate {
@@ -131,6 +131,7 @@ public class RBS {
     let keychain = KeychainSwift()
     
     let commandQueueSubject = PublishSubject<RBSAction>()
+    let authWithCustomTokenQueueSubject = PublishSubject<AuthWithCustomTokenRequest>()
     
     public init(clientType:RBSClientType) {
         self.clientType = clientType
@@ -138,6 +139,34 @@ public class RBS {
         
         self.service = MoyaProvider<RBSService>(plugins: [ CachePolicyPlugin() ])
         
+        
+        let authWithCustomTokenReq = authWithCustomTokenQueueSubject
+            .asObservable()
+            .do(onNext: { [weak self] _ in
+                if let s = self {
+                    s.delegate?.rbsClient(client: s, authStatusChanged: .authenticating)
+                }
+            })
+            .flatMapLatest { [weak self] req in
+                self!.service.rx.request(.authWithCustomToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
+            }
+            
+            
+        
+        let authWithCustomTokenReqResp = authWithCustomTokenReq
+            .compactMap{ $0.element }
+        
+        
+        authWithCustomTokenReqResp
+            .observeOn(MainScheduler.instance)
+            .subscribe { [weak self] resp in
+                if let s = self, let resp = resp.element, let tokenData = resp.tokenData {
+                    s.saveTokenData(tokenData: tokenData)
+                }
+            }
+            .disposed(by: disposeBag)
+
+
         
         
         
@@ -240,11 +269,6 @@ public class RBS {
             .flatMapLatest { [weak self] tokenData in
                 self!.service.rx.request(.getAnonymToken(request: GetAnonymTokenRequest())).map(GetTokenResponse.self).asObservable().materialize()
             }
-            //            .do(onNext: { [weak self] e in
-            //                if let s = self {
-            //                    s.delegate?.rbsClient(client: s, authStatusChanged: .signedInAnonymously(user: RBSUser(uid: <#T##String#>, isAnonymous: <#T##Bool#>)))
-            //                }
-            //            })
             .share()
         
         let getAnonymTokenReqResp = getAnonymTokenReq
@@ -311,7 +335,7 @@ public class RBS {
         }
     }
     
-    private func saveTokenData(tokenData:RBSTokenData) {
+    private func saveTokenData(tokenData:RBSTokenData?) {
         
         var storedUserId:String? = nil
         // First get last stored token data from keychain.
@@ -323,6 +347,17 @@ public class RBS {
                     storedUserId = userId
                 }
             }
+        }
+        
+        guard let tokenData = tokenData else {
+            
+            if storedUserId != nil {
+                self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+            }
+            
+            self.keychain.delete(RBSKeychainKey.token.keyName)
+            
+            return
         }
         
         let obj = Mapper<RBSTokenData>().toJSON(tokenData)
@@ -342,60 +377,34 @@ public class RBS {
                     } else {
                         self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
                     }
+                } else {
+                    
                 }
                 
             }
         }
     }
+
     
-    
-    
-    private func getAnonymToken() -> Single<GetTokenResponse> {
-        return self.service.rx.request(.getAnonymToken(request: GetAnonymTokenRequest())).map(GetTokenResponse.self)
-    }
-    
-    private func getTokenData() -> Observable<RBSTokenData?> {
-        
-        return Observable<RBSTokenData?>.create { (observer) -> Disposable in
-            
-            if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
-                let json = try! JSONSerialization.jsonObject(with: data, options: [])
-                observer.onNext(Mapper<RBSTokenData>().map(JSONObject: json))
-            } else {
-                observer.onNext(nil)
-            }
-            
-            return Disposables.create()
-        }
-    }
-    
-    private func send() -> Observable<String> {
-        return Observable<String>.create { (observer) -> Disposable in
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                observer.onNext("SUCCESS")
-            }
-            
-            return Disposables.create()
-        }
-    }
+
     
     // MARK: Public methods
     
     public func authenticateWithCustomToken(_ customToken:String) {
-        
+        self.saveTokenData(tokenData: nil)
+        let req = AuthWithCustomTokenRequest()
+        req.customToken = customToken
+        self.authWithCustomTokenQueueSubject.onNext(req)
     }
     
     public func signOut() {
-        self.keychain.clear()
-        
-        self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+        self.saveTokenData(tokenData: nil)
     }
     
     public func send(action actionName:String,
                      data:[String:Any],
                      onSuccess: @escaping (_ result:String) -> Void,
-                     onError: @escaping (_ error:Error) -> Void) throws {
+                     onError: @escaping (_ error:Error) -> Void) {
         
         let action = RBSAction()
         action.action = actionName
