@@ -41,7 +41,10 @@ enum RBSService {
     
     var urlParameters: [String: Any] {
         switch self {
-        case .getAnonymToken(let request): return ["projectId": request.projectId!, "clientId": "rbs.user.enduser"] //Mapper().toJSON(request)
+        case .getAnonymToken(let request):
+            return [
+                "projectId": request.projectId!,
+            ]
         case .refreshToken(let request): return ["refreshToken":request.refreshToken!]
         case .authWithCustomToken(let request): return ["customToken": request.customToken!]
         case .executeAction(let request):

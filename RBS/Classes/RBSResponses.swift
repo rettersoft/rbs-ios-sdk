@@ -124,13 +124,13 @@ extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
         }
     }
     
-    func parseJSON() -> Single<[String:Any]?> {
+    func parseJSON() -> Single<[Any]?> {
         return flatMap { response in
             
             do {
-                
                 // make sure this JSON is in the format we expect
-                if let json = try JSONSerialization.jsonObject(with: response.data, options: []) as? [String: Any] {
+                
+                if let json = try JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
                     return .just(json)
                 }
             } catch let error as NSError {

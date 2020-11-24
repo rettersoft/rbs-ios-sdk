@@ -20,8 +20,8 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ruk-LR-27Y">
-                                <rect key="frame" x="136.5" y="318.5" width="102" height="30"/>
-                                <state key="normal" title="Execute Action"/>
+                                <rect key="frame" x="168.5" y="318.5" width="38" height="30"/>
+                                <state key="normal" title="Login"/>
                                 <connections>
                                     <action selector="testButtonTapped:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="2aH-9J-eNY"/>
                                 </connections>

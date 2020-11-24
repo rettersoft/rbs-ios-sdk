@@ -1,9 +1,9 @@
 {
   "name": "RBS",
-  "version": "0.1.0",
+  "version": "0.2.3",
   "summary": "RBS iOS SDK.",
   "description": "TODO: Add long description of the pod here.",
-  "homepage": "https://github.com/baranbaygan/RBS",
+  "homepage": "https://github.com/rettersoft/rbs-ios-sdk",
   "license": {
     "type": "MIT",
     "file": "LICENSE"
@@ -12,8 +12,8 @@
     "baranbaygan": "baran@rettermobile.com"
   },
   "source": {
-    "git": "https://github.com/baranbaygan/RBS.git",
-    "tag": "0.1.0"
+    "git": "https://github.com/rettersoft/rbs-ios-sdk.git",
+    "tag": "main"
   },
   "platforms": {
     "ios": "10.0"

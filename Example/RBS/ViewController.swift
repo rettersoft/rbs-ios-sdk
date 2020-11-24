@@ -11,12 +11,14 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let testCustomToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRJZCI6InJicy51c2VyLmVuZHVzZXIiLCJhbm9ueW1vdXMiOmZhbHNlLCJwcm9qZWN0SWQiOiI3YjdlY2VjNzIxZDU0NjI5YmVkMWQzYjFhZWMyMTBlOCIsInVzZXJJZCI6Im15VXNlcklkMSIsInRpbWVzdGFtcCI6MTYwNTgwOTkwMjAxMiwic2VydmljZUlkIjoidGVzdHNlcnZpY2UiLCJpYXQiOjE2MDU4MDk5MDIsImV4cCI6MTYwNzEwNTkwMn0.O1xaYQzdG7awq_jt5PxrezKTtR7OG4BEa0AxOvpTt60"
+    let testCustomToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI3YjdlY2VjNzIxZDU0NjI5YmVkMWQzYjFhZWMyMTBlOCIsImlkZW50aXR5IjoicmJzLmJ1c2luZXNzdXNlcmF1dGgiLCJpYXQiOjE2MDYyNDI1NzMsImV4cCI6MTYxNjI0MjU3Mn0.Pu_FTXaOwxRq7mnWurF2V3VtyVscxnxN-33M3thTlxk"
     
-    let rbs = RBS(clientType: .user(userType: ""), projectId: "7b7ecec721d54629bed1d3b1aec210e8")
+    let rbs = RBS(config: RBSConfig(projectId: "7b7ecec721d54629bed1d3b1aec210e8"))
+    //let rbs = RBS(clientType: .user(userType: ""), projectId: "7b7ecec721d54629bed1d3b1aec210e8")
     
     override func viewDidLoad() {
         super.viewDidLoad()
+    
         rbs.delegate = self
     }
     
@@ -30,14 +32,19 @@ class ViewController: UIViewController {
     }
     @IBAction func testButtonTapped(_ sender: Any) {
         
-        
-        
-        rbs.send(action: "rbs.oms.request.SOME_ACTION",
+        rbs.send(action: "rbs.basicauth.request.VALIDATE_OTP",
                  data: [
-                    "key": "value",
+                    "msisdn": "905305553322",
+                    "otp": "141414"
                  ],
                  onSuccess: { result in
                     print("Result: \(result)")
+                    
+                    if let serviceResponse = result.first as? [String:Any],
+                       let resp = serviceResponse["response"] as? [String:Any],
+                       let customToken = resp["customToken"] as? String {
+                        self.rbs.authenticateWithCustomToken(customToken)
+                    }
                  },
                  onError: { error in
                     print("Error Result: \(error)")

@@ -6,8 +6,17 @@ import KeychainSwift
 import ObjectMapper
 import JWTDecode
 
-public enum RBSClientType {
-    case user(userType:String), service(secretKey:String)
+public struct RBSConfig {
+    var projectId:String?
+    var secretKey:String?
+    var developerId:String?
+    var serviceId:String?
+    public init(projectId:String, secretKey:String? = nil, developerId:String? = nil, serviceId:String? = nil) {
+        self.projectId = projectId
+        self.secretKey = secretKey
+        self.developerId = developerId
+        self.serviceId = serviceId
+    }
 }
 
 public struct RBSUser {
@@ -80,7 +89,7 @@ enum RBSError : Error {
 class RBSAction {
     var tokenData:RBSTokenData?
     
-    var successCompletion: ((_ result:[String:Any]) -> Void)?
+    var successCompletion: ((_ result:[Any]) -> Void)?
     var errorCompletion: ((_ error:Error) -> Void)?
     var action: String?
     var data: [String:Any]?
@@ -94,7 +103,6 @@ class RBSAction {
 
 public class RBS {
     
-    var clientType:RBSClientType
     var projectId:String!
     
     public var delegate:RBSClientDelegate? {
@@ -156,10 +164,12 @@ public class RBS {
     let commandQueueSubject = PublishSubject<RBSAction>()
     let authWithCustomTokenQueueSubject = PublishSubject<AuthWithCustomTokenRequest>()
     
-    public init(clientType:RBSClientType, projectId: String) {
-        self.clientType = clientType
+    var config:RBSConfig!
+    
+    public init(config:RBSConfig) {
+        
         self.disposeBag = DisposeBag()
-        self.projectId = projectId
+        self.config = config
 
         let authWithCustomTokenReq = authWithCustomTokenQueueSubject
             .asObservable()
@@ -196,184 +206,89 @@ public class RBS {
         let incomingAction = commandQueueSubject
             .asObservable()
         
-        
         // At every incoming action fetch the stored token in keychain.
         let tokenData = incomingAction
-            .flatMapLatest({ [weak self] action -> Observable<RBSTokenData?> in
-                
-                if let data = self?.keychain.getData(RBSKeychainKey.token.keyName) {
-                    let json = try! JSONSerialization.jsonObject(with: data, options: [])
-                    return Observable.of(Mapper<RBSTokenData>().map(JSONObject: json))
-                } else {
-                    return Observable.of(nil)
-                }
-                
+            .concatMap({ [weak self] action in
+                return self!.getTokenData()
             })
-            .share()
-        
-        
-        
-        
-        
-        // STORED TOKEN
-        let storedToken = tokenData
-            .filter { [weak self] tokenData -> Bool in
-                guard let now = self?.safeNow else { return false }
-                guard let tokenData = tokenData,
-                      let _ = tokenData.accessToken,
-                      let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
-                      let accessTokenExpiresAt = tokenData.accessTokenExpiresAt else { return false }
-                
-                if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
-                    return true
-                    
-                }
-                return false
-            }
-            .map { $0! }
-        
-        
-        
-        
-        
-        
-        // REFRESH TOKEN
-        let refreshTokenReq = tokenData
-            .filter { [weak self] tokenData -> Bool in
-                guard let now = self?.safeNow else { return false }
-                guard let tokenData = tokenData,
-                      let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
-                      let accessTokenExpiresAt = tokenData.accessTokenExpiresAt else { return false }
-                
-                if refreshTokenExpiresAt > now && accessTokenExpiresAt < now { return true }
-                return false
-            }
-            .map({ tokenData -> RefreshTokenRequest in
-                let req = RefreshTokenRequest()
-                req.refreshToken = tokenData?.refreshToken
-                return req
-            })
-            .flatMapLatest { [weak self] req in
-                self!.service.rx.request(.refreshToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
-            }
-        
-        let refreshTokenReqResp = refreshTokenReq
-            .compactMap{ $0.element }
-        
-        let refreshedToken = refreshTokenReqResp
-            .map { (tokenResponse) -> RBSTokenData? in
-                tokenResponse.tokenData
-            }
-            .filter { $0 != nil }
-            .map { $0! }
-        
-        
-        
-        
-        
-        // GET A NEW ANONYM TOKEN
-        let getAnonymTokenReq = tokenData
-            .filter { [weak self] tokenData -> Bool in
-                
-                guard let now = self?.safeNow else { return false }
-                
-                guard let tokenData = tokenData,
-                      let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt else {
-                    // No token data, get anonym token
-                    return true
-                }
-                
-                if refreshTokenExpiresAt > now { return false }
-                
-                return true
-            }
-            .map({ [weak self] _ -> GetAnonymTokenRequest in
-                let req = GetAnonymTokenRequest()
-                req.projectId = self!.projectId
-                return req
-            })
-            .flatMapLatest { [weak self] req in
-                self!.service.rx.request(.getAnonymToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
-            }
-            .share()
-        
-        let getAnonymTokenReqResp = getAnonymTokenReq
-            .compactMap{ $0.element }
-        
-        let getAnonymTokenReqRespError = getAnonymTokenReq.compactMap { $0.error?.localizedDescription }
-        
-        let anonymToken = getAnonymTokenReqResp
-            .map { (tokenResponse) -> RBSTokenData? in
-                tokenResponse.tokenData
-            }
-            .filter { $0 != nil }
-            .map { $0! }
-        
-        
-        
-        
-        
-        
-        // LATEST TOKEN
-        let token = Observable
-            .merge([storedToken, anonymToken, refreshedToken])
             .do(onNext: { [weak self] tokenData in
-                self?.saveTokenData(tokenData: tokenData)
+                self!.saveTokenData(tokenData: tokenData)
             })
-            .debug("TOKEN", trimOutput: false)
+
+            
         
         
-        
-        // FINALLY EXECUTE THE ACTION
-        let executeActionReq = Observable
-            .zip(incomingAction, token)
-            .debug("EXECUTE_DEBUG ZIP", trimOutput: true)
-            .map({ (action, tokenData) -> RBSAction in
-                action.tokenData = tokenData
-                return action
-            })
-            .map { action -> ExecuteActionRequest in
+        let actionResult = Observable
+            .zip(incomingAction, tokenData)
+            .concatMap { [weak self] (action, tokenData) -> Observable<[Any]?> in
                 let req = ExecuteActionRequest()
-                req.accessToken = action.tokenData!.accessToken
-                req.actionName = action.action!
+                req.accessToken = tokenData.accessToken
+                req.actionName = action.action
                 req.payload = action.data
-                return req
-            }
-            .flatMapLatest { [weak self] req in
-                self!.service.rx.request(.executeAction(request: req)).catchBaseError().parseJSON().asObservable().materialize()
-            }
-            .debug("EXECUTE_DEBUG", trimOutput: true)
-            .share()
+                return self!.service.rx.request(.executeAction(request: req)).parseJSON().asObservable() }
         
-        let executeActionReqResp = executeActionReq.compactMap{ $0.element }
-        let executeActionReqRespError = executeActionReq.compactMap{ $0.error }
         
         Observable
-            .zip(executeActionReqRespError, incomingAction)
-            .observeOn(MainScheduler.instance)
-            .subscribe(onNext: { (error, action) in
-                if let completion = action.errorCompletion {
-                    completion(error)
-                }
-            })
-            .disposed(by: disposeBag)
-        
-        Observable
-            .zip(executeActionReqResp, incomingAction)
-            .observeOn(MainScheduler.instance)
-            .debug("EXECUTE_DEBUG 2", trimOutput: true)
-            .subscribe { (resp, action) in
-                if let completion = action.successCompletion, let resp = resp {
-                    completion(resp)
+            .zip(incomingAction, actionResult)
+            .subscribe { (action, response) in
+                if let completion = action.successCompletion, let result = response {
+                    completion(result)
                 }
             }
             .disposed(by: disposeBag)
+
     }
     
     private var safeNow:Date {
         get {
             return Date(timeIntervalSinceNow: 30)
         }
+    }
+    
+    private func getTokenData() -> Observable<RBSTokenData> {
+        
+        // Skip service tokens for now
+//        if let secretKey = self.config.secretKey, let serviceId = self.config.serviceId {
+//
+//        }
+        
+        let now = self.safeNow
+        
+        if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
+            let json = try! JSONSerialization.jsonObject(with: data, options: [])
+            if let tokenData = Mapper<RBSTokenData>().map(JSONObject: json),
+               let refreshToken = tokenData.refreshToken,
+               let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
+               let accessTokenExpiresAt = tokenData.accessTokenExpiresAt {
+                
+                if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
+                    // Token can be used
+                    return Observable.just(tokenData)
+                }
+                
+                if refreshTokenExpiresAt > now && accessTokenExpiresAt < now {
+                    
+                    // DO REFRESH
+                    let refreshTokenRequest = RefreshTokenRequest()
+                    refreshTokenRequest.refreshToken = refreshToken
+                    return self.service.rx.request(.refreshToken(request: refreshTokenRequest)).map(GetTokenResponse.self).map({ response in
+                        return response.tokenData!
+                    }).asObservable()
+                }
+
+            }
+        }
+            
+        // Get anonym token
+        let getAnonymTokenRequest = GetAnonymTokenRequest()
+        getAnonymTokenRequest.projectId = self.config.projectId
+        
+        return self.service.rx.request(.getAnonymToken(request: getAnonymTokenRequest)).map(GetTokenResponse.self).map({ response in
+            return response.tokenData!
+        }).asObservable()
+            
+        
+        
     }
     
     private func saveTokenData(tokenData:RBSTokenData?) {
@@ -444,7 +359,7 @@ public class RBS {
     
     public func send(action actionName:String,
                      data:[String:Any],
-                     onSuccess: @escaping (_ result:[String:Any]) -> Void,
+                     onSuccess: @escaping (_ result:[Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
         let action = RBSAction()
