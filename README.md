@@ -30,10 +30,10 @@ pod 'RBS'
 
 ## Initialize SDK
 
-Initialize the SDK with a user type defined in your project configuration and your project id created in RBS console.
+Initialize the SDK with your project id created in RBS console.
 
 ```swift
-let rbs = RBS(clientType: .user(userType: "rbs.user.some_user_type"), projectId: "YOUR PROJECT ID")
+let rbs = RBS(config: RBSConfig(projectId: "7b7ecec721d54629bed1d3b1aec210e8"))
 ```
 
 ## Authenticate 
@@ -95,7 +95,7 @@ Some examples:
 You can use .send method to send actions to RBS services. The list of which actions will trigger which services is listed in your RBS project configuration.
 
 ```swift
-rbs.send(action: "rbs.oms.request.SOME_ACTION",
+rbs.send(action: "rbs.someservice.request.SOME_ACTION",
          data: [
             "key": "value",
          ],

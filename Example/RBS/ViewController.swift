@@ -14,7 +14,6 @@ class ViewController: UIViewController {
     let testCustomToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI3YjdlY2VjNzIxZDU0NjI5YmVkMWQzYjFhZWMyMTBlOCIsImlkZW50aXR5IjoicmJzLmJ1c2luZXNzdXNlcmF1dGgiLCJpYXQiOjE2MDYyNDI1NzMsImV4cCI6MTYxNjI0MjU3Mn0.Pu_FTXaOwxRq7mnWurF2V3VtyVscxnxN-33M3thTlxk"
     
     let rbs = RBS(config: RBSConfig(projectId: "7b7ecec721d54629bed1d3b1aec210e8"))
-    //let rbs = RBS(clientType: .user(userType: ""), projectId: "7b7ecec721d54629bed1d3b1aec210e8")
     
     override func viewDidLoad() {
         super.viewDidLoad()
