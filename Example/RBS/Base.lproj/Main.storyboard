@@ -33,22 +33,31 @@
                                     <action selector="signoutTapped:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="dEh-Y5-lSG"/>
                                 </connections>
                             </button>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Jx2-K1-o55">
-                                <rect key="frame" x="97" y="280" width="181" height="30"/>
-                                <state key="normal" title="Sign in with Custom Token"/>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="tRQ-6h-ocY">
+                                <rect key="frame" x="118" y="432" width="139" height="30"/>
+                                <state key="normal" title="Business User Login"/>
                                 <connections>
-                                    <action selector="signInWithCustomToken:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="Ybe-z3-JnK"/>
+                                    <action selector="loginBusinessUser:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="COJ-Db-cLM"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="IUt-gk-mJm">
+                                <rect key="frame" x="130.5" y="394" width="114" height="30"/>
+                                <state key="normal" title="Search Products"/>
+                                <connections>
+                                    <action selector="searchProducts:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="hbY-F5-Uki"/>
                                 </connections>
                             </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="ruk-LR-27Y" firstAttribute="top" secondItem="Jx2-K1-o55" secondAttribute="bottom" constant="8.5" id="9QK-lw-Ppj"/>
+                            <constraint firstItem="IUt-gk-mJm" firstAttribute="top" secondItem="Mhp-Ys-8In" secondAttribute="bottom" constant="8" symbolic="YES" id="CcR-em-Yzs"/>
                             <constraint firstItem="Mhp-Ys-8In" firstAttribute="centerX" secondItem="ruk-LR-27Y" secondAttribute="centerX" id="J98-ah-Jwn"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerY" secondItem="kh9-bI-dsS" secondAttribute="centerY" id="JHh-ep-dbg"/>
+                            <constraint firstItem="tRQ-6h-ocY" firstAttribute="centerX" secondItem="IUt-gk-mJm" secondAttribute="centerX" id="TRW-WX-iHx"/>
                             <constraint firstItem="Mhp-Ys-8In" firstAttribute="top" secondItem="ruk-LR-27Y" secondAttribute="bottom" constant="7.5" id="Zkz-L8-7V4"/>
+                            <constraint firstItem="IUt-gk-mJm" firstAttribute="centerX" secondItem="Mhp-Ys-8In" secondAttribute="centerX" id="nov-jM-gf5"/>
+                            <constraint firstItem="tRQ-6h-ocY" firstAttribute="top" secondItem="IUt-gk-mJm" secondAttribute="bottom" constant="8" symbolic="YES" id="sQh-rq-0wU"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerX" secondItem="kh9-bI-dsS" secondAttribute="centerX" id="u8w-hQ-mpl"/>
-                            <constraint firstItem="Jx2-K1-o55" firstAttribute="centerX" secondItem="ruk-LR-27Y" secondAttribute="centerX" id="wTJ-Gt-swH"/>
                         </constraints>
                     </view>
                 </viewController>
