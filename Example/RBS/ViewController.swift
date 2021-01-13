@@ -15,7 +15,7 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-    
+        
         rbs.delegate = self
     }
     
@@ -30,14 +30,15 @@ class ViewController: UIViewController {
         rbs.send(action: "rbs.basicauth.request.VALIDATE_OTP",
                  data: [
                     "msisdn": "905305553322",
-                    "otp": "141414"
+                    "otp": "1414"
                  ],
                  onSuccess: { result in
                     print("Result: \(result)")
                     
                     if let serviceResponse = result.first as? [String:Any],
                        let resp = serviceResponse["response"] as? [String:Any],
-                       let customToken = resp["customToken"] as? String {
+                       let data = resp["data"] as? [String:Any],
+                       let customToken = data["customToken"] as? String {
                         self.rbs.authenticateWithCustomToken(customToken)
                     }
                  },
@@ -51,9 +52,18 @@ class ViewController: UIViewController {
     }
     @IBAction func searchProducts(_ sender: Any) {
         
-        rbs.send(action: "rbs.product.request.SEARCH",
+//        rbs.send(action: "rbs.product.request.GET_CATEGORIES",
+//                 data: [:],
+//                 onSuccess: { result in
+//                    print("Result: \(result)")
+//                 },
+//                 onError: { error in
+//                    print("Error Result: \(error)")
+//                 })
+        
+        rbs.send(action: "rbs.product.request.GET_PRODUCTS",
                  data: [
-                    "searchTerm": "dove"
+                    "productIds": "4600702095791|8714100918425"
                  ],
                  onSuccess: { result in
                     print("Result: \(result)")
@@ -61,7 +71,33 @@ class ViewController: UIViewController {
                  onError: { error in
                     print("Error Result: \(error)")
                  })
-
+        
+        //        rbs.send(action: "rbs.product.request.SEARCH",
+        //                 data: [
+        //                    "searchTerm": "dove",
+        //                    "filters": [
+        //                        ["filterId": "categories", "filterValues": ["BPC"]]
+        //                    ]
+        //                 ],
+        //                 onSuccess: { result in
+        //                    print("Result: \(result)")
+        //                 },
+        //                 onError: { error in
+        //                    print("Error Result: \(error)")
+        //                 })
+        
+        
+        //        rbs.send(action: "rbs.product.request.AGGREGATE",
+        //                 data: [
+        //                    "searchTerm": "dove"
+        //                 ],
+        //                 onSuccess: { result in
+        //                    print("Result: \(result)")
+        //                 },
+        //                 onError: { error in
+        //                    print("Error Result: \(error)")
+        //                 })
+        
     }
     @IBAction func loginBusinessUser(_ sender: Any) {
         rbs.send(action: "rbs.businessuserauth.request.LOGIN",
@@ -82,10 +118,59 @@ class ViewController: UIViewController {
                     print("Error Result: \(error)")
                  })
     }
+    @IBAction func testAction(_ sender: Any) {
+  
+        
+        
+        
+        rbs.send(action: "rbs.basicauth.request.SEND_OTP",
+                 data: ["msisdn":"905305553322"],
+                 onSuccess: { result in
+                    print("Result: \(result)")
+                 },
+                 onError: { error in
+                    print("Error Result: \(error)")
+                 })
+        
+        
+        
+        
+        
+//        rbs.send(action: "rbs.crm.request.GET_MY_PROFILE",
+//                 data: [:],
+//                 onSuccess: { result in
+//                    print("Result: \(result)")
+//                 },
+//                 onError: { error in
+//                    print("Error Result: \(error)")
+//                 })
+        
+//        rbs.send(action: "rbs.crm.request.UPDATE_PROFILE",
+//                 data: ["firstName":"Baran", "lastName": "Baygan"],
+//                 onSuccess: { result in
+//                    print("Result: \(result)")
+//                 },
+//                 onError: { error in
+//                    print("Error Result: \(error)")
+//                 })
+        
+    }
 }
 
 extension ViewController : RBSClientDelegate {
     func rbsClient(client: RBS, authStatusChanged toStatus: RBSClientAuthStatus) {
+        
+        //        switch toStatus {
+        //        case .signedIn(let user):
+        //            break
+        //        case .signedInAnonymously(let user):
+        //            break
+        //        case .authenticating:
+        //            break
+        //        case .signedOut:
+        //            break
+        //        }
+        
         print("RBS authStatusChanged to \(toStatus)")
     }
 }

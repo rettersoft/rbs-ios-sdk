@@ -47,12 +47,21 @@
                                     <action selector="searchProducts:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="hbY-F5-Uki"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="GBR-R1-uaz">
+                                <rect key="frame" x="149" y="470" width="77" height="30"/>
+                                <state key="normal" title="Test Action"/>
+                                <connections>
+                                    <action selector="testAction:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="dm2-fS-1Bs"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
+                            <constraint firstItem="GBR-R1-uaz" firstAttribute="top" secondItem="tRQ-6h-ocY" secondAttribute="bottom" constant="8" symbolic="YES" id="AQs-mv-wCk"/>
                             <constraint firstItem="IUt-gk-mJm" firstAttribute="top" secondItem="Mhp-Ys-8In" secondAttribute="bottom" constant="8" symbolic="YES" id="CcR-em-Yzs"/>
                             <constraint firstItem="Mhp-Ys-8In" firstAttribute="centerX" secondItem="ruk-LR-27Y" secondAttribute="centerX" id="J98-ah-Jwn"/>
                             <constraint firstItem="ruk-LR-27Y" firstAttribute="centerY" secondItem="kh9-bI-dsS" secondAttribute="centerY" id="JHh-ep-dbg"/>
+                            <constraint firstItem="GBR-R1-uaz" firstAttribute="centerX" secondItem="tRQ-6h-ocY" secondAttribute="centerX" id="RnM-UP-Efe"/>
                             <constraint firstItem="tRQ-6h-ocY" firstAttribute="centerX" secondItem="IUt-gk-mJm" secondAttribute="centerX" id="TRW-WX-iHx"/>
                             <constraint firstItem="Mhp-Ys-8In" firstAttribute="top" secondItem="ruk-LR-27Y" secondAttribute="bottom" constant="7.5" id="Zkz-L8-7V4"/>
                             <constraint firstItem="IUt-gk-mJm" firstAttribute="centerX" secondItem="Mhp-Ys-8In" secondAttribute="centerX" id="nov-jM-gf5"/>

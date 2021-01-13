@@ -63,7 +63,10 @@ struct RBSTokenData : Mappable {
 }
 
 public enum RBSClientAuthStatus {
-    case signedIn(user:RBSUser), signedInAnonymously(user:RBSUser), signedOut, authenticating
+    case signedIn(user:RBSUser),
+         signedInAnonymously(user:RBSUser),
+         signedOut,
+         authenticating
 }
 
 public protocol RBSClientDelegate {
