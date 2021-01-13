@@ -10,7 +10,7 @@ import Foundation
 import Moya
 import ObjectMapper
 
-
+var rbsUrl:String = "https://core.rtbs.io"
 
 enum RBSService {
     
@@ -77,7 +77,7 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     }
     
     var baseURL: URL {
-        URL(string: "https://core-test.rettermobile.com")!
+        URL(string: rbsUrl)!
     }
     var path: String { return self.endPoint }
     var method: Moya.Method { return self.httpMethod }

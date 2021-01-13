@@ -13,15 +13,15 @@ To run the example project, clone the repo, and run `pod install` from the Examp
 
 RBS can be used by developers to build event based systems. You should create an RBS account and an RBS project to start. 
 
-https://console.rettermobile.com
+https://console.rtbs.io
 
 ## Requirements
 
-You need to have a RBS projectId.
+You need to have a RTBS projectId.
 
 ## Installation
 
-RBS is available through [CocoaPods](https://cocoapods.org). To install
+RTBS is available through [CocoaPods](https://cocoapods.org). To install
 it, simply add the following line to your Podfile:
 
 ```ruby
@@ -33,7 +33,7 @@ pod 'RBS'
 Initialize the SDK with your project id created in RBS console.
 
 ```swift
-let rbs = RBS(config: RBSConfig(projectId: "7b7ecec721d54629bed1d3b1aec210e8"))
+let rbs = RBS(config: RBSConfig(projectId: "{PROJECT_ID}"))
 ```
 
 ## Authenticate 
@@ -86,10 +86,10 @@ Action Type can only be “event” or “request”.
 
 Some examples:
 
-- rbs.oms.request.INSERT_ORDER
-- rbs.oms.request.LIST_MY_ORDERS
-- rbs.oms.event.ORDER_CREATED
-- rbs.notification.request.SEND_SMS
+- rtbs.oms.request.INSERT_ORDER
+- rtbs.oms.request.LIST_MY_ORDERS
+- rtbs.oms.event.ORDER_CREATED
+- rtbs.notification.request.SEND_SMS
 - somecompany.awesomeservice.request.DO_STUFF
 
 You can use .send method to send actions to RBS services. The list of which actions will trigger which services is listed in your RBS project configuration.

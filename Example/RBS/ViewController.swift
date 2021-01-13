@@ -11,11 +11,10 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "933a51e1c87a9ccc181d21fca91c2aad"))
+    let rbs = RBS(config: RBSConfig(projectId: "1ae2cad9191e60d2e58ca4e4303d3e80"))
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         rbs.delegate = self
     }
     
@@ -27,18 +26,18 @@ class ViewController: UIViewController {
     
     @IBAction func testButtonTapped(_ sender: Any) {
         
-        rbs.send(action: "rbs.basicauth.request.VALIDATE_OTP",
+        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
                  data: [
-                    "msisdn": "905305553322",
-                    "otp": "1414"
+                    "email": "email@test.com",
+                    "password": "password"
                  ],
                  onSuccess: { result in
                     print("Result: \(result)")
                     
                     if let serviceResponse = result.first as? [String:Any],
                        let resp = serviceResponse["response"] as? [String:Any],
-                       let data = resp["data"] as? [String:Any],
-                       let customToken = data["customToken"] as? String {
+                       
+                       let customToken = resp["customToken"] as? String {
                         self.rbs.authenticateWithCustomToken(customToken)
                     }
                  },
@@ -61,10 +60,8 @@ class ViewController: UIViewController {
 //                    print("Error Result: \(error)")
 //                 })
         
-        rbs.send(action: "rbs.product.request.GET_PRODUCTS",
-                 data: [
-                    "productIds": "4600702095791|8714100918425"
-                 ],
+        rbs.send(action: "rbs.catalog.request.SEARCH",
+                 data: [:],
                  onSuccess: { result in
                     print("Result: \(result)")
                  },
@@ -123,8 +120,8 @@ class ViewController: UIViewController {
         
         
         
-        rbs.send(action: "rbs.basicauth.request.SEND_OTP",
-                 data: ["msisdn":"905305553322"],
+        rbs.send(action: "rbs.wms.request.GET_OPTION",
+                 data: ["optionId":"MAIN"],
                  onSuccess: { result in
                     print("Result: \(result)")
                  },

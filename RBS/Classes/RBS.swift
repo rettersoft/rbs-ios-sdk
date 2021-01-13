@@ -11,11 +11,14 @@ public struct RBSConfig {
     var secretKey:String?
     var developerId:String?
     var serviceId:String?
-    public init(projectId:String, secretKey:String? = nil, developerId:String? = nil, serviceId:String? = nil) {
+    var rbsUrl:String?
+    
+    public init(projectId:String, secretKey:String? = nil, developerId:String? = nil, serviceId:String? = nil, rbsUrl:String? = nil) {
         self.projectId = projectId
         self.secretKey = secretKey
         self.developerId = developerId
         self.serviceId = serviceId
+        self.rbsUrl = rbsUrl
     }
 }
 
@@ -26,10 +29,13 @@ public struct RBSUser {
 
 struct RBSTokenData : Mappable {
     
+    var projectId: String?
     var isAnonym: Bool?
     var uid: String?
     var accessToken: String?
     var refreshToken: String?
+    
+    
     
     var accessTokenExpiresAt: Date? {
         get {
@@ -56,6 +62,7 @@ struct RBSTokenData : Mappable {
     
     mutating func mapping(map: Map) {
         isAnonym <- map["isAnonym"]
+        projectId <- map["projectId"]
         uid <- map["uid"]
         accessToken <- map["accessToken"]
         refreshToken <- map["refreshToken"]
@@ -79,7 +86,7 @@ enum RBSKeychainKey {
     var keyName: String {
         get {
             switch self {
-            case .token: return "com.rettermobile.rbs.token"
+            case .token: return "io.rtbs.token"
             }
         }
     }
@@ -122,14 +129,14 @@ public class RBS {
                     if let userId = jwt.claim(name: "userId").string, let anonymous = jwt.claim(name: "anonymous").rawValue as? Bool {
                         
                         
-                            // User has changed.
-                            let user = RBSUser(uid: userId, isAnonymous: anonymous)
-                            
-                            if anonymous {
-                                self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
-                            } else {
-                                self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
-                            }
+                        // User has changed.
+                        let user = RBSUser(uid: userId, isAnonymous: anonymous)
+                        
+                        if anonymous {
+                            self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
+                        } else {
+                            self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
+                        }
                         
                         
                     }
@@ -157,6 +164,7 @@ public class RBS {
                 return ""
             }
             self._service = MoyaProvider<RBSService>(plugins: [ CachePolicyPlugin(), accessTokenPlugin ])
+            
             return self._service!
         }
     }
@@ -173,7 +181,12 @@ public class RBS {
         
         self.disposeBag = DisposeBag()
         self.config = config
-
+        self.projectId = config.projectId
+        if let url = config.rbsUrl {
+            rbsUrl = url
+        }
+        
+        
         let authWithCustomTokenReq = authWithCustomTokenQueueSubject
             .asObservable()
             .do(onNext: { [weak self] _ in
@@ -184,8 +197,8 @@ public class RBS {
             .flatMapLatest { [weak self] req in
                 self!.service.rx.request(.authWithCustomToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
             }
-            
-            
+        
+        
         
         let authWithCustomTokenReqResp = authWithCustomTokenReq
             .compactMap{ $0.element }
@@ -195,12 +208,15 @@ public class RBS {
             .observeOn(MainScheduler.instance)
             .subscribe { [weak self] resp in
                 if let s = self, let resp = resp.element, let tokenData = resp.tokenData {
-                    s.saveTokenData(tokenData: tokenData)
+                    
+                    var td = RBSTokenData.init(JSON: tokenData.toJSON())
+                    td?.projectId = s.projectId
+                    s.saveTokenData(tokenData: td)
                 }
             }
             .disposed(by: disposeBag)
-
-
+        
+        
         
         
         
@@ -215,10 +231,12 @@ public class RBS {
                 return self!.getTokenData()
             })
             .do(onNext: { [weak self] tokenData in
-                self!.saveTokenData(tokenData: tokenData)
+                var td = RBSTokenData.init(JSON: tokenData.toJSON())
+                td?.projectId = self?.projectId
+                self!.saveTokenData(tokenData: td)
             })
-
-            
+        
+        
         
         
         let actionResult = Observable
@@ -239,7 +257,7 @@ public class RBS {
                 }
             }
             .disposed(by: disposeBag)
-
+        
     }
     
     private var safeNow:Date {
@@ -251,9 +269,9 @@ public class RBS {
     private func getTokenData() -> Observable<RBSTokenData> {
         
         // Skip service tokens for now
-//        if let secretKey = self.config.secretKey, let serviceId = self.config.serviceId {
-//
-//        }
+        //        if let secretKey = self.config.secretKey, let serviceId = self.config.serviceId {
+        //
+        //        }
         
         let now = self.safeNow
         
@@ -262,34 +280,42 @@ public class RBS {
             if let tokenData = Mapper<RBSTokenData>().map(JSONObject: json),
                let refreshToken = tokenData.refreshToken,
                let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
-               let accessTokenExpiresAt = tokenData.accessTokenExpiresAt {
+               let accessTokenExpiresAt = tokenData.accessTokenExpiresAt,
+               let projectId = tokenData.projectId {
                 
-                if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
-                    // Token can be used
-                    return Observable.just(tokenData)
-                }
-                
-                if refreshTokenExpiresAt > now && accessTokenExpiresAt < now {
+                if(projectId == self.projectId) {
+                    if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
+                        // Token can be used
+                        return Observable.just(tokenData)
+                    }
                     
-                    // DO REFRESH
-                    let refreshTokenRequest = RefreshTokenRequest()
-                    refreshTokenRequest.refreshToken = refreshToken
-                    return self.service.rx.request(.refreshToken(request: refreshTokenRequest)).map(GetTokenResponse.self).map({ response in
-                        return response.tokenData!
-                    }).asObservable()
+                    if refreshTokenExpiresAt > now && accessTokenExpiresAt < now {
+                        
+                        // DO REFRESH
+                        let refreshTokenRequest = RefreshTokenRequest()
+                        refreshTokenRequest.refreshToken = refreshToken
+                        return self.service.rx.request(.refreshToken(request: refreshTokenRequest)).map(GetTokenResponse.self).map({ response in
+                            return response.tokenData!
+                        }).asObservable()
+                    }
                 }
-
+                
+                
+                
             }
         }
-            
+        
         // Get anonym token
         let getAnonymTokenRequest = GetAnonymTokenRequest()
         getAnonymTokenRequest.projectId = self.config.projectId
         
-        return self.service.rx.request(.getAnonymToken(request: getAnonymTokenRequest)).map(GetTokenResponse.self).map({ response in
-            return response.tokenData!
-        }).asObservable()
-            
+        return self
+            .service
+            .rx
+            .request(.getAnonymToken(request: getAnonymTokenRequest))
+            .map(GetTokenResponse.self).map({ response in
+                return response.tokenData!
+            }).asObservable()
         
         
     }
@@ -343,9 +369,9 @@ public class RBS {
             }
         }
     }
-
     
-
+    
+    
     
     // MARK: Public methods
     
