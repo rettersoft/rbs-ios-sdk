@@ -90,7 +90,7 @@ class BaseErrorResponse: Decodable, Error {
 
 
 extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
-
+    
     /// If the Response status code is in the 200 - 299 range, it lets the Response through.
     /// If it's outside that range, it tries to map the Response into an BaseErrorResponse
     /// object and throws an error with the appropriate message from BaseErrorResponse.
@@ -112,11 +112,11 @@ extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
             do {
                 let baseErrorResponse = try response.map(BaseErrorResponse.self)
                 baseErrorResponse.httpStatusCode = response.statusCode
-
+                
                 throw baseErrorResponse
             }
             catch let error as BaseErrorResponse {
-              throw error
+                throw error
             }
             catch let e {
                 throw e
@@ -137,7 +137,19 @@ extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
                 print("Failed to load: \(error.localizedDescription)")
             }
             
-            return .just(nil)
+            let baseErrorResponse = try response.map(BaseErrorResponse.self)
+            baseErrorResponse.httpStatusCode = response.statusCode
+            
+            throw baseErrorResponse
+            
+//            let errorResponse:[String:[Any]] = [
+//                "Error": [[
+//                    ["StatusCode": response.statusCode],
+//                    ["Error": response.description]
+//                ]]
+//            ]
+//
+//            return .just(errorResponse)
         }
     }
 }

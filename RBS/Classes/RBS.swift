@@ -239,21 +239,43 @@ public class RBS {
         
         
         
-        let actionResult = Observable
+        let actionReq = Observable
             .zip(incomingAction, tokenData)
-            .concatMap { [weak self] (action, tokenData) -> Observable<[Any]?> in
+            .flatMapLatest { [weak self] (action, tokenData) -> Observable<Event<[Any]?>> in
                 let req = ExecuteActionRequest()
                 req.accessToken = tokenData.accessToken
                 req.actionName = action.action
                 req.payload = action.data
-                return self!.service.rx.request(.executeAction(request: req)).parseJSON().asObservable() }
+                return self!.service.rx.request(.executeAction(request: req)).parseJSON().asObservable().materialize() }
+            .share()
+        
+        let actionResult = actionReq
+            .map { $0.element }
+            .filter { $0 != nil }
+            .map { $0! }
+        
+        let actionError = actionReq
+            .map { $0.error }
+            .filter { $0 != nil }
+            .map { $0! }
         
         
         Observable
             .zip(incomingAction, actionResult)
             .subscribe { (action, response) in
+                
                 if let completion = action.successCompletion, let result = response {
                     completion(result)
+                }
+                
+            }
+            .disposed(by: disposeBag)
+        
+        Observable
+            .zip(incomingAction, actionError)
+            .subscribe { (action, error) in
+                if let completion = action.errorCompletion {
+                    completion(error)
                 }
             }
             .disposed(by: disposeBag)
