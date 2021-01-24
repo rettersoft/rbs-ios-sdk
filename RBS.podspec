@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RBS'
-  s.version          = '0.3.3'
+  s.version          = '0.3.4'
   s.summary          = 'RBS iOS SDK.'
 
 # This description is used to generate tags and improve search results.
@@ -40,9 +40,7 @@ TODO: Add long description of the pod here.
   # s.public_header_files = 'Pod/Classes/**/*.h'
 #  s.frameworks = 'CommonCrypto'
   # s.dependency 'AFNetworking', '~> 2.3'
-  
-  s.dependency 'Moya/RxSwift', '~> 14.0'
-  s.dependency 'RxSwift', '~> 5'
+  s.dependency 'Moya', '~> 14.0'
   s.dependency 'Alamofire', '~> 5.2'
   s.dependency 'ObjectMapper', '~> 3.4'
   s.dependency 'KeychainSwift', '~> 19.0'

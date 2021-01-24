@@ -1,6 +1,6 @@
 {
   "name": "RBS",
-  "version": "0.2.3",
+  "version": "0.3.4",
   "summary": "RBS iOS SDK.",
   "description": "TODO: Add long description of the pod here.",
   "homepage": "https://github.com/rettersoft/rbs-ios-sdk",
@@ -20,11 +20,8 @@
   },
   "source_files": "RBS/Classes/**/*",
   "dependencies": {
-    "Moya/RxSwift": [
+    "Moya": [
       "~> 14.0"
-    ],
-    "RxSwift": [
-      "~> 5"
     ],
     "Alamofire": [
       "~> 5.2"

@@ -7,7 +7,7 @@
 
 import Foundation
 import Moya
-import RxSwift
+
 
 class GetTokenResponse: Decodable {
     
@@ -88,68 +88,68 @@ class BaseErrorResponse: Decodable, Error {
 
 
 
-
-extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
-    
-    /// If the Response status code is in the 200 - 299 range, it lets the Response through.
-    /// If it's outside that range, it tries to map the Response into an BaseErrorResponse
-    /// object and throws an error with the appropriate message from BaseErrorResponse.
-    func catchBaseError() -> Single<Element> {
-        return flatMap { response in
-            if (200...299).contains(response.statusCode) {
-                if(response.data.count == 0) {
-                    // Empty respnse but status code is okay
-                    return .just(Element(statusCode: response.statusCode, data: "{}".data(using: .utf8)!))
-                }
-                
-                return .just(response)
-            }
-            
-            if response.statusCode == 401 {
-                // Unauthorized
-            }
-            
-            do {
-                let baseErrorResponse = try response.map(BaseErrorResponse.self)
-                baseErrorResponse.httpStatusCode = response.statusCode
-                
-                throw baseErrorResponse
-            }
-            catch let error as BaseErrorResponse {
-                throw error
-            }
-            catch let e {
-                throw e
-            }
-        }
-    }
-    
-    func parseJSON() -> Single<[Any]?> {
-        return flatMap { response in
-            
-            do {
-                // make sure this JSON is in the format we expect
-                
-                if let json = try JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
-                    return .just(json)
-                }
-            } catch let error as NSError {
-                print("Failed to load: \(error.localizedDescription)")
-            }
-            
-            let baseErrorResponse = try response.map(BaseErrorResponse.self)
-            baseErrorResponse.httpStatusCode = response.statusCode
-            
-            throw baseErrorResponse
-            
-//            let errorResponse:[String:[Any]] = [
-//                "Error": [[
-//                    ["StatusCode": response.statusCode],
-//                    ["Error": response.description]
-//                ]]
-//            ]
 //
-//            return .just(errorResponse)
-        }
-    }
-}
+//extension PrimitiveSequence where Trait == SingleTrait, Element == Response {
+//
+//    /// If the Response status code is in the 200 - 299 range, it lets the Response through.
+//    /// If it's outside that range, it tries to map the Response into an BaseErrorResponse
+//    /// object and throws an error with the appropriate message from BaseErrorResponse.
+//    func catchBaseError() -> Single<Element> {
+//        return flatMap { response in
+//            if (200...299).contains(response.statusCode) {
+//                if(response.data.count == 0) {
+//                    // Empty respnse but status code is okay
+//                    return .just(Element(statusCode: response.statusCode, data: "{}".data(using: .utf8)!))
+//                }
+//
+//                return .just(response)
+//            }
+//
+//            if response.statusCode == 401 {
+//                // Unauthorized
+//            }
+//
+//            do {
+//                let baseErrorResponse = try response.map(BaseErrorResponse.self)
+//                baseErrorResponse.httpStatusCode = response.statusCode
+//
+//                throw baseErrorResponse
+//            }
+//            catch let error as BaseErrorResponse {
+//                throw error
+//            }
+//            catch let e {
+//                throw e
+//            }
+//        }
+//    }
+//
+//    func parseJSON() -> Single<[Any]?> {
+//        return flatMap { response in
+//
+//            do {
+//                // make sure this JSON is in the format we expect
+//
+//                if let json = try JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
+//                    return .just(json)
+//                }
+//            } catch let error as NSError {
+//                print("Failed to load: \(error.localizedDescription)")
+//            }
+//
+//            let baseErrorResponse = try response.map(BaseErrorResponse.self)
+//            baseErrorResponse.httpStatusCode = response.statusCode
+//
+//            throw baseErrorResponse
+//
+////            let errorResponse:[String:[Any]] = [
+////                "Error": [[
+////                    ["StatusCode": response.statusCode],
+////                    ["Error": response.description]
+////                ]]
+////            ]
+////
+////            return .just(errorResponse)
+//        }
+//    }
+//}

@@ -1,6 +1,5 @@
 
 import Alamofire
-import RxSwift
 import Moya
 import KeychainSwift
 import ObjectMapper
@@ -27,7 +26,7 @@ public struct RBSUser {
     var isAnonymous:Bool
 }
 
-struct RBSTokenData : Mappable {
+struct RBSTokenData : Mappable, Decodable {
     
     var projectId: String?
     var isAnonym: Bool?
@@ -96,6 +95,10 @@ enum RBSError : Error {
     case TokenError
 }
 
+extension String: LocalizedError {
+    public var errorDescription: String? { return self }
+}
+
 class RBSAction {
     var tokenData:RBSTokenData?
     
@@ -114,6 +117,11 @@ class RBSAction {
 public class RBS {
     
     var projectId:String!
+    
+    let serialQueue = DispatchQueue(label: "com.queue.Serial")
+    
+    let semaphore = DispatchSemaphore(value: 0)
+    
     
     public var delegate:RBSClientDelegate? {
         didSet {
@@ -169,116 +177,18 @@ public class RBS {
         }
     }
     
-    var disposeBag:DisposeBag
-    let keychain = KeychainSwift()
     
-    let commandQueueSubject = PublishSubject<RBSAction>()
-    let authWithCustomTokenQueueSubject = PublishSubject<AuthWithCustomTokenRequest>()
+    let keychain = KeychainSwift()
     
     var config:RBSConfig!
     
     public init(config:RBSConfig) {
         
-        self.disposeBag = DisposeBag()
         self.config = config
         self.projectId = config.projectId
         if let url = config.rbsUrl {
             rbsUrl = url
         }
-        
-        
-        let authWithCustomTokenReq = authWithCustomTokenQueueSubject
-            .asObservable()
-            .do(onNext: { [weak self] _ in
-                if let s = self {
-                    s.delegate?.rbsClient(client: s, authStatusChanged: .authenticating)
-                }
-            })
-            .flatMapLatest { [weak self] req in
-                self!.service.rx.request(.authWithCustomToken(request: req)).map(GetTokenResponse.self).asObservable().materialize()
-            }
-        
-        
-        
-        let authWithCustomTokenReqResp = authWithCustomTokenReq
-            .compactMap{ $0.element }
-        
-        
-        authWithCustomTokenReqResp
-            .observeOn(MainScheduler.instance)
-            .subscribe { [weak self] resp in
-                if let s = self, let resp = resp.element, let tokenData = resp.tokenData {
-                    
-                    var td = RBSTokenData.init(JSON: tokenData.toJSON())
-                    td?.projectId = s.projectId
-                    s.saveTokenData(tokenData: td)
-                }
-            }
-            .disposed(by: disposeBag)
-        
-        
-        
-        
-        
-        
-        
-        let incomingAction = commandQueueSubject
-            .asObservable()
-        
-        // At every incoming action fetch the stored token in keychain.
-        let tokenData = incomingAction
-            .concatMap({ [weak self] action in
-                return self!.getTokenData()
-            })
-            .do(onNext: { [weak self] tokenData in
-                var td = RBSTokenData.init(JSON: tokenData.toJSON())
-                td?.projectId = self?.projectId
-                self!.saveTokenData(tokenData: td)
-            })
-        
-        
-        
-        
-        let actionReq = Observable
-            .zip(incomingAction, tokenData)
-            .flatMapLatest { [weak self] (action, tokenData) -> Observable<Event<[Any]?>> in
-                let req = ExecuteActionRequest()
-                req.accessToken = tokenData.accessToken
-                req.actionName = action.action
-                req.payload = action.data
-                return self!.service.rx.request(.executeAction(request: req)).parseJSON().asObservable().materialize() }
-            .share()
-        
-        let actionResult = actionReq
-            .map { $0.element }
-            .filter { $0 != nil }
-            .map { $0! }
-        
-        let actionError = actionReq
-            .map { $0.error }
-            .filter { $0 != nil }
-            .map { $0! }
-        
-        
-        Observable
-            .zip(incomingAction, actionResult)
-            .subscribe { (action, response) in
-                
-                if let completion = action.successCompletion, let result = response {
-                    completion(result)
-                }
-                
-            }
-            .disposed(by: disposeBag)
-        
-        Observable
-            .zip(incomingAction, actionError)
-            .subscribe { (action, error) in
-                if let completion = action.errorCompletion {
-                    completion(error)
-                }
-            }
-            .disposed(by: disposeBag)
         
     }
     
@@ -288,7 +198,9 @@ public class RBS {
         }
     }
     
-    private func getTokenData() -> Observable<RBSTokenData> {
+    private func getTokenData() throws -> RBSTokenData {
+        
+        print("getTokenData called")
         
         // Skip service tokens for now
         //        if let secretKey = self.config.secretKey, let serviceId = self.config.serviceId {
@@ -298,7 +210,9 @@ public class RBS {
         let now = self.safeNow
         
         if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
+            
             let json = try! JSONSerialization.jsonObject(with: data, options: [])
+            
             if let tokenData = Mapper<RBSTokenData>().map(JSONObject: json),
                let refreshToken = tokenData.refreshToken,
                let refreshTokenExpiresAt = tokenData.refreshTokenExpiresAt,
@@ -306,9 +220,12 @@ public class RBS {
                let projectId = tokenData.projectId {
                 
                 if(projectId == self.projectId) {
+                    print("refreshTokenExpiresAt \(refreshTokenExpiresAt)")
+                    print("accessTokenExpiresAt \(accessTokenExpiresAt)")
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
                         // Token can be used
-                        return Observable.just(tokenData)
+                        print("returning tokenData")
+                        return tokenData
                     }
                     
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt < now {
@@ -316,34 +233,19 @@ public class RBS {
                         // DO REFRESH
                         let refreshTokenRequest = RefreshTokenRequest()
                         refreshTokenRequest.refreshToken = refreshToken
-                        return self.service.rx.request(.refreshToken(request: refreshTokenRequest)).map(GetTokenResponse.self).map({ response in
-                            return response.tokenData!
-                        }).asObservable()
+                        
+                        return try self.refreshToken(tokenData: tokenData)
                     }
                 }
-                
-                
-                
             }
         }
         
         // Get anonym token
-        let getAnonymTokenRequest = GetAnonymTokenRequest()
-        getAnonymTokenRequest.projectId = self.config.projectId
-        
-        return self
-            .service
-            .rx
-            .request(.getAnonymToken(request: getAnonymTokenRequest))
-            .map(GetTokenResponse.self).map({ response in
-                return response.tokenData!
-            }).asObservable()
-        
-        
+        return try self.getAnonymToken()
     }
     
     private func saveTokenData(tokenData:RBSTokenData?) {
-        
+        print("saveTokenData called")
         var storedUserId:String? = nil
         // First get last stored token data from keychain.
         if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
@@ -380,9 +282,14 @@ public class RBS {
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
                     
                     if anonymous {
-                        self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
+                        DispatchQueue.main.async {
+                            self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
+                        }
+                        
                     } else {
-                        self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
+                        DispatchQueue.main.async {
+                            self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
+                        }
                     }
                 } else {
                     
@@ -393,15 +300,135 @@ public class RBS {
     }
     
     
+    private func getAnonymToken() throws -> RBSTokenData {
+        print("getAnonymToken called")
+        let getAnonymTokenRequest = GetAnonymTokenRequest()
+        getAnonymTokenRequest.projectId = self.config.projectId
+        var retVal:RBSTokenData? = nil
+        
+        self.service.request(.getAnonymToken(request: getAnonymTokenRequest)) {
+            [weak self] result in
+            
+            switch result {
+            case .success(let response):
+                retVal = try! response.map(RBSTokenData.self)
+                break
+            default:
+                break
+            }
+            self?.semaphore.signal()
+        }
+        _ = self.semaphore.wait(wallTimeout: .distantFuture)
+        retVal?.projectId = self.config.projectId
+        retVal?.isAnonym = true
+        if let r = retVal {
+            return r
+        }
+        throw "Can't get anonym token"
+    }
+    
+    private func refreshToken(tokenData:RBSTokenData) throws -> RBSTokenData {
+        print("refreshToken called")
+        let refreshTokenRequest = RefreshTokenRequest()
+        refreshTokenRequest.refreshToken = tokenData.refreshToken
+        var retVal:RBSTokenData? = nil
+        
+        
+        self.service.request(.refreshToken(request: refreshTokenRequest)) {
+            [weak self] result in
+            switch result {
+            case .success(let response):
+                retVal = try! response.map(RBSTokenData.self)
+                break
+            default:
+                break
+            }
+            self?.semaphore.signal()
+        }
+        _ = self.semaphore.wait(wallTimeout: .distantFuture)
+        retVal?.projectId = tokenData.projectId
+        retVal?.isAnonym = tokenData.isAnonym
+        if let r = retVal {
+            return r
+        }
+        throw "Can't refresh token"
+    }
+    
+    private func executeAction(tokenData:RBSTokenData, action:String, data:[String:Any]) throws -> [Any] {
+        print("executeAction called")
+        let req = ExecuteActionRequest()
+        req.accessToken = tokenData.accessToken
+        req.actionName = action
+        req.payload = data
+        var errorResponse:BaseErrorResponse?
+        var retVal:[Any]? = nil
+        let semaphoreLocal = DispatchSemaphore(value: 0)
+        self.service.request(.executeAction(request: req)) {
+            result in
+            switch result {
+            case .success(let response):
+                
+                if (200...299).contains(response.statusCode) {
+                    if let json = try! JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
+                        retVal = json
+                    }
+                } else {
+                    errorResponse = try! response.map(BaseErrorResponse.self)
+                    errorResponse!.httpStatusCode = response.statusCode
+                }
+                break
+            case .failure(_):
+                break
+            }
+            semaphoreLocal.signal()
+        }
+        _ = semaphoreLocal.wait(wallTimeout: .distantFuture)
+        if let e = errorResponse {
+            throw e
+        }
+        if let r = retVal {
+            return r
+        }
+        
+        // Işıl & Arda & Efe
+        
+        throw "Can't execute action."
+    }
+    
     
     
     // MARK: Public methods
     
     public func authenticateWithCustomToken(_ customToken:String) {
-        self.saveTokenData(tokenData: nil)
-        let req = AuthWithCustomTokenRequest()
-        req.customToken = customToken
-        self.authWithCustomTokenQueueSubject.onNext(req)
+        
+        print("authenticateWithCustomToken called")
+        DispatchQueue.global().async {
+            
+        
+//        serialQueue.async {
+            self.saveTokenData(tokenData: nil)
+            let req = AuthWithCustomTokenRequest()
+            req.customToken = customToken
+            
+            self.service.request(.authWithCustomToken(request: req)) {
+                [weak self] result in
+                
+                switch result {
+                case .success(let response):
+                    var tokenData = try! response.map(RBSTokenData.self)
+                    tokenData.projectId = self?.config.projectId
+                    tokenData.isAnonym = false
+                    self?.saveTokenData(tokenData: tokenData)
+                    break
+                default:
+                    break
+                }
+                self?.semaphore.signal()
+            }
+            _ = self.semaphore.wait(wallTimeout: .distantFuture)
+        }
+        
+        
     }
     
     public func signOut() {
@@ -413,12 +440,43 @@ public class RBS {
                      onSuccess: @escaping (_ result:[Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
-        let action = RBSAction()
-        action.action = actionName
-        action.data = data
-        action.successCompletion = onSuccess
-        action.errorCompletion = onError
-        self.commandQueueSubject.onNext(action)
+        print("send called")
+        
+        serialQueue.async {
+
+            
+            print("send called in async block")
+            
+            do {
+                
+                let tokenData = try self.getTokenData()
+                
+                self.saveTokenData(tokenData: tokenData)
+                
+                DispatchQueue.global().async {
+                    do {
+                        let actionResult = try self.executeAction(tokenData: tokenData, action: actionName, data: data)
+                        
+                        DispatchQueue.main.async {
+                            onSuccess(actionResult)
+                        }
+                    } catch {
+                        DispatchQueue.main.async {
+                            onError(error)
+                        }
+                    }
+                }
+                
+                
+            } catch {
+                
+            }
+            
+            
+            
+            
+            
+        }
         
     }
 }

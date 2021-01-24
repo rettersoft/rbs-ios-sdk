@@ -51,23 +51,51 @@ class ViewController: UIViewController {
     }
     @IBAction func searchProducts(_ sender: Any) {
         
-//        rbs.send(action: "rbs.product.request.GET_CATEGORIES",
-//                 data: [:],
-//                 onSuccess: { result in
-//                    print("Result: \(result)")
-//                 },
-//                 onError: { error in
-//                    print("Error Result: \(error)")
-//                 })
+//                rbs.send(action: "rbs.product.request.GET_CATEGORIES",
+//                         data: [:],
+//                         onSuccess: { result in
+//                            print("Result: \(result)")
+//                         },
+//                         onError: { error in
+//                            print("Error Result: \(error)")
+//                         })
         
         rbs.send(action: "rbs.catalog.request.SEARCH",
-                 data: [:],
+                 data: ["searchTerm": "hardal"],
                  onSuccess: { result in
-                    print("Result: \(result)")
+                    print("SEARCH Result success")
                  },
                  onError: { error in
-                    print("Error Result: \(error)")
+                    print("SEARCH Error Result: \(error)")
                  })
+        
+        
+                rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
+                         data: ["searchTerm": "hardal"],
+                         onSuccess: { result in
+                            print("GET_CATEGORIES Result success")
+                         },
+                         onError: { error in
+                            print("GET_CATEGORIES Error Result: \(error)")
+                         })
+        //
+        //        rbs.send(action: "rbs.catalog.request.SEARCH",
+        //                 data: ["searchTerm": "hardal"],
+        //                 onSuccess: { result in
+        //                    print("SEARCH Result: \(result)")
+        //                 },
+        //                 onError: { error in
+        //                    print("SEARCH Error Result: \(error)")
+        //                 })
+        //
+        //        rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
+        //                 data: ["searchTerm": "hardal"],
+        //                 onSuccess: { result in
+        //                    print("GET_CATEGORIES Result: \(result)")
+        //                 },
+        //                 onError: { error in
+        //                    print("GET_CATEGORIES Error Result: \(error)")
+        //                 })
         
         //        rbs.send(action: "rbs.product.request.SEARCH",
         //                 data: [
@@ -116,7 +144,7 @@ class ViewController: UIViewController {
                  })
     }
     @IBAction func testAction(_ sender: Any) {
-  
+        
         
         
         
@@ -133,23 +161,23 @@ class ViewController: UIViewController {
         
         
         
-//        rbs.send(action: "rbs.crm.request.GET_MY_PROFILE",
-//                 data: [:],
-//                 onSuccess: { result in
-//                    print("Result: \(result)")
-//                 },
-//                 onError: { error in
-//                    print("Error Result: \(error)")
-//                 })
+        //        rbs.send(action: "rbs.crm.request.GET_MY_PROFILE",
+        //                 data: [:],
+        //                 onSuccess: { result in
+        //                    print("Result: \(result)")
+        //                 },
+        //                 onError: { error in
+        //                    print("Error Result: \(error)")
+        //                 })
         
-//        rbs.send(action: "rbs.crm.request.UPDATE_PROFILE",
-//                 data: ["firstName":"Baran", "lastName": "Baygan"],
-//                 onSuccess: { result in
-//                    print("Result: \(result)")
-//                 },
-//                 onError: { error in
-//                    print("Error Result: \(error)")
-//                 })
+        //        rbs.send(action: "rbs.crm.request.UPDATE_PROFILE",
+        //                 data: ["firstName":"Baran", "lastName": "Baygan"],
+        //                 onSuccess: { result in
+        //                    print("Result: \(result)")
+        //                 },
+        //                 onError: { error in
+        //                    print("Error Result: \(error)")
+        //                 })
         
     }
 }
