@@ -16,6 +16,7 @@ enum RBSService {
     
     case getAnonymToken(request: GetAnonymTokenRequest)
     case executeAction(request: ExecuteActionRequest)
+    
     case refreshToken(request: RefreshTokenRequest)
     case authWithCustomToken(request: AuthWithCustomTokenRequest)
     
@@ -23,6 +24,7 @@ enum RBSService {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
         case .executeAction(_): return "/user/action"
+            
         case .refreshToken(_): return "/public/auth-refresh"
         case .authWithCustomToken(_): return "/public/auth"
         }
@@ -39,6 +41,12 @@ enum RBSService {
         }
     }
     
+    func isGetAction(_ action:String?) -> Bool {
+        guard let actionName = action else { return false }
+        let actionType = actionName.split(separator: ".")[2]
+        return actionType == "get"
+    }
+    
     var urlParameters: [String: Any] {
         switch self {
         case .getAnonymToken(let request):
@@ -47,12 +55,27 @@ enum RBSService {
             ]
         case .refreshToken(let request): return ["refreshToken":request.refreshToken!]
         case .authWithCustomToken(let request): return ["customToken": request.customToken!]
+            
         case .executeAction(let request):
+            
             if let accessToken = request.accessToken, let action = request.actionName {
+                
+                if(self.isGetAction(action)) {
+                    let payload: [String:Any] = request.payload == nil ? [:] : request.payload!
+                    let data: Data = try! JSONSerialization.data(withJSONObject:payload, options: JSONSerialization.WritingOptions.prettyPrinted)
+                    let dataBase64 = data.base64EncodedString().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+                    return [
+                        "auth": accessToken,
+                        "action": action,
+                        "data": dataBase64!
+                    ]
+                }
+                
                 return [
                     "auth": accessToken,
                     "action": action
                 ]
+                
             } else {
                 return [:]
             }
@@ -61,7 +84,14 @@ enum RBSService {
     
     var httpMethod: Moya.Method {
         switch self {
-        case .executeAction: return .post
+        case .executeAction(let request):
+            
+            if(self.isGetAction(request.actionName)) {
+                return .get
+            }
+            
+            return .post
+        
         default: return .get
         }
     }
@@ -89,7 +119,12 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     }
     var task: Task {
         switch self {
-        case .executeAction(_):
+        case .executeAction(let request):
+            
+            if(self.isGetAction(request.actionName)) {
+                return .requestParameters(parameters: self.urlParameters, encoding: URLEncoding.default)
+            }
+            
             return .requestCompositeParameters(bodyParameters: self.body,
                                                bodyEncoding: JSONEncoding.default,
                                                urlParameters: self.urlParameters)
@@ -102,7 +137,7 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
         var headers: [String: String] = [:]
         headers["Content-Type"] = "application/json"
         headers["x-rbs-sdk-client"] = "ios"
-
+        
         switch self {
         case .executeAction:
             headers["Content-Type"] = "application/json"
@@ -131,7 +166,7 @@ final class CachePolicyPlugin: PluginType {
     public func prepare(_ request: URLRequest, target: TargetType) -> URLRequest {
         if let cachePolicyGettable = target as? CachePolicyGettable {
             var mutableRequest = request
-             mutableRequest.cachePolicy = cachePolicyGettable.cachePolicy
+            mutableRequest.cachePolicy = cachePolicyGettable.cachePolicy
             return mutableRequest
         }
         

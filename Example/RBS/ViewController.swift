@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "1ae2cad9191e60d2e58ca4e4303d3e80"))
+    let rbs = RBS(config: RBSConfig(projectId: "3b7eea955170401685ec7ac0187ef787", rbsUrl: "https://core-test.rettermobile.com"))
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -50,78 +50,36 @@ class ViewController: UIViewController {
         rbs.signOut()
     }
     @IBAction func searchProducts(_ sender: Any) {
+
         
-//                rbs.send(action: "rbs.product.request.GET_CATEGORIES",
-//                         data: [:],
-//                         onSuccess: { result in
-//                            print("Result: \(result)")
-//                         },
-//                         onError: { error in
-//                            print("Error Result: \(error)")
-//                         })
-        
-        rbs.send(action: "rbs.catalog.request.SEARCH",
+        rbs.send(action: "rbs.catalog.get.SEARCH",
                  data: ["searchTerm": "hardal"],
                  onSuccess: { result in
-                    print("SEARCH Result success")
+                    print("SEARCH Result: \(result)")
                  },
                  onError: { error in
                     print("SEARCH Error Result: \(error)")
                  })
+//
+//        rbs.send(action: "rbs.catalog.get.SEARCH",
+//                 data: ["searchTerm": "hardal"],
+//                 onSuccess: { result in
+//                    print("SEARCH Result success")
+//                 },
+//                 onError: { error in
+//                    print("SEARCH Error Result: \(error)")
+//                 })
+//
+//
+//                rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
+//                         data: ["searchTerm": "hardal"],
+//                         onSuccess: { result in
+//                            print("GET_CATEGORIES Result success")
+//                         },
+//                         onError: { error in
+//                            print("GET_CATEGORIES Error Result: \(error)")
+//                         })
         
-        
-                rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
-                         data: ["searchTerm": "hardal"],
-                         onSuccess: { result in
-                            print("GET_CATEGORIES Result success")
-                         },
-                         onError: { error in
-                            print("GET_CATEGORIES Error Result: \(error)")
-                         })
-        //
-        //        rbs.send(action: "rbs.catalog.request.SEARCH",
-        //                 data: ["searchTerm": "hardal"],
-        //                 onSuccess: { result in
-        //                    print("SEARCH Result: \(result)")
-        //                 },
-        //                 onError: { error in
-        //                    print("SEARCH Error Result: \(error)")
-        //                 })
-        //
-        //        rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
-        //                 data: ["searchTerm": "hardal"],
-        //                 onSuccess: { result in
-        //                    print("GET_CATEGORIES Result: \(result)")
-        //                 },
-        //                 onError: { error in
-        //                    print("GET_CATEGORIES Error Result: \(error)")
-        //                 })
-        
-        //        rbs.send(action: "rbs.product.request.SEARCH",
-        //                 data: [
-        //                    "searchTerm": "dove",
-        //                    "filters": [
-        //                        ["filterId": "categories", "filterValues": ["BPC"]]
-        //                    ]
-        //                 ],
-        //                 onSuccess: { result in
-        //                    print("Result: \(result)")
-        //                 },
-        //                 onError: { error in
-        //                    print("Error Result: \(error)")
-        //                 })
-        
-        
-        //        rbs.send(action: "rbs.product.request.AGGREGATE",
-        //                 data: [
-        //                    "searchTerm": "dove"
-        //                 ],
-        //                 onSuccess: { result in
-        //                    print("Result: \(result)")
-        //                 },
-        //                 onError: { error in
-        //                    print("Error Result: \(error)")
-        //                 })
         
     }
     @IBAction func loginBusinessUser(_ sender: Any) {

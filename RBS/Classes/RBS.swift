@@ -308,7 +308,6 @@ public class RBS {
         
         self.service.request(.getAnonymToken(request: getAnonymTokenRequest)) {
             [weak self] result in
-            
             switch result {
             case .success(let response):
                 retVal = try! response.map(RBSTokenData.self)
@@ -363,8 +362,7 @@ public class RBS {
         var errorResponse:BaseErrorResponse?
         var retVal:[Any]? = nil
         let semaphoreLocal = DispatchSemaphore(value: 0)
-        self.service.request(.executeAction(request: req)) {
-            result in
+        self.service.request(.executeAction(request: req)) { result in
             switch result {
             case .success(let response):
                 
@@ -377,7 +375,8 @@ public class RBS {
                     errorResponse!.httpStatusCode = response.statusCode
                 }
                 break
-            case .failure(_):
+            case .failure(let f):
+                print(f)
                 break
             }
             semaphoreLocal.signal()
