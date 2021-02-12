@@ -55,6 +55,7 @@ class AuthWithCustomTokenRequest : Mappable {
 
 class ExecuteActionRequest : Mappable {
     
+    var projectId: String?
     var accessToken:String?
     var actionName:String?
     var payload: [String:Any]?
@@ -67,6 +68,7 @@ class ExecuteActionRequest : Mappable {
     }
     
     func mapping(map: Map) {
+        projectId <- map["projectId"]
         accessToken <- map["accessToken"]
         actionName <- map["actionName"]
         payload <- map["payload"]

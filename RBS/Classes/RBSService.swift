@@ -23,7 +23,8 @@ enum RBSService {
     var endPoint: String {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
-        case .executeAction(_): return "/user/action"
+        case .executeAction(let request):
+            return "/user/action/\(request.projectId!)/\(request.actionName!)"
             
         case .refreshToken(_): return "/public/auth-refresh"
         case .authWithCustomToken(_): return "/public/auth"
@@ -66,14 +67,14 @@ enum RBSService {
                     let dataBase64 = data.base64EncodedString().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
                     return [
                         "auth": accessToken,
-                        "action": action,
+                        
                         "data": dataBase64!
                     ]
                 }
                 
                 return [
                     "auth": accessToken,
-                    "action": action
+                    
                 ]
                 
             } else {

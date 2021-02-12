@@ -356,6 +356,7 @@ public class RBS {
     private func executeAction(tokenData:RBSTokenData, action:String, data:[String:Any]) throws -> [Any] {
         print("executeAction called")
         let req = ExecuteActionRequest()
+        req.projectId = self.projectId
         req.accessToken = tokenData.accessToken
         req.actionName = action
         req.payload = data
