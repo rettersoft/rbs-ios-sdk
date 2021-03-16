@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "3b7eea955170401685ec7ac0187ef787", rbsUrl: "https://core-test.rettermobile.com"))
+    let rbs = RBS(config: RBSConfig(projectId: "3b7eea955170401685ec7ac0187ef787", region: .euWest1Beta))
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,24 +26,35 @@ class ViewController: UIViewController {
     
     @IBAction func testButtonTapped(_ sender: Any) {
         
-        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
-                 data: [
-                    "email": "email@test.com",
-                    "password": "password"
-                 ],
-                 onSuccess: { result in
-                    print("Result: \(result)")
-                    
-                    if let serviceResponse = result.first as? [String:Any],
-                       let resp = serviceResponse["response"] as? [String:Any],
-                       
-                       let customToken = resp["customToken"] as? String {
-                        self.rbs.authenticateWithCustomToken(customToken)
-                    }
-                 },
-                 onError: { error in
-                    print("Error Result: \(error)")
-                 })
+        rbs.generateGetActionUrl(action: "rbs.businessuserauth.get.LOGIN",
+                                 data: [
+                                    "email": "email@test.com",
+                                    "password": "password"
+                                 ]) { url in
+            print("URL \(url)")
+        } onError: { err in
+            
+        }
+
+        
+//        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
+//                 data: [
+//                    "email": "email@test.com",
+//                    "password": "password"
+//                 ],
+//                 onSuccess: { result in
+//                    print("Result: \(result)")
+//
+//                    if let serviceResponse = result.first as? [String:Any],
+//                       let resp = serviceResponse["response"] as? [String:Any],
+//
+//                       let customToken = resp["customToken"] as? String {
+//                        self.rbs.authenticateWithCustomToken(customToken)
+//                    }
+//                 },
+//                 onError: { error in
+//                    print("Error Result: \(error)")
+//                 })
         
     }
     @IBAction func signoutTapped(_ sender: Any) {

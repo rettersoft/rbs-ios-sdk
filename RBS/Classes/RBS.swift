@@ -5,19 +5,42 @@ import KeychainSwift
 import ObjectMapper
 import JWTDecode
 
+public enum RbsRegion {
+    case euWest1, euWest1Beta
+    
+    var getUrl:String {
+        switch self {
+        case .euWest1: return "https://core.rtbs.io"
+        case .euWest1Beta: return "https://core-test.rettermobile.com"
+        }
+    }
+    
+    var postUrl:String {
+        switch self {
+        case .euWest1: return "https://core-internal.rtbs.io"
+        case .euWest1Beta: return "https://core-internal-beta.rtbs.io"
+        }
+    }
+}
+
 public struct RBSConfig {
     var projectId:String?
     var secretKey:String?
     var developerId:String?
     var serviceId:String?
-    var rbsUrl:String?
+    var region: RbsRegion?
     
-    public init(projectId:String, secretKey:String? = nil, developerId:String? = nil, serviceId:String? = nil, rbsUrl:String? = nil) {
+    public init(projectId:String,
+                secretKey:String? = nil,
+                developerId:String? = nil,
+                serviceId:String? = nil,
+                region:RbsRegion? = nil) {
+        
         self.projectId = projectId
         self.secretKey = secretKey
         self.developerId = developerId
         self.serviceId = serviceId
-        self.rbsUrl = rbsUrl
+        self.region = region == nil ? .euWest1 : region
     }
 }
 
@@ -186,9 +209,7 @@ public class RBS {
         
         self.config = config
         self.projectId = config.projectId
-        if let url = config.rbsUrl {
-            rbsUrl = url
-        }
+        globalRbsRegion = config.region!
         
     }
     
@@ -404,8 +425,8 @@ public class RBS {
         print("authenticateWithCustomToken called")
         DispatchQueue.global().async {
             
-        
-//        serialQueue.async {
+            
+            //        serialQueue.async {
             self.saveTokenData(tokenData: nil)
             let req = AuthWithCustomTokenRequest()
             req.customToken = customToken
@@ -435,6 +456,40 @@ public class RBS {
         self.saveTokenData(tokenData: nil)
     }
     
+    
+    public func generateGetActionUrl(action actionName:String,
+                                     data:[String:Any],
+                                     onSuccess: @escaping (_ result:String) -> Void,
+                                     onError: @escaping (_ error:Error) -> Void) {
+        serialQueue.async {
+            do {
+                
+                let tokenData = try self.getTokenData()
+                self.saveTokenData(tokenData: tokenData)
+                
+                let req = ExecuteActionRequest()
+                req.projectId = self.projectId
+                req.accessToken = tokenData.accessToken
+                req.actionName = actionName
+                req.payload = data
+                
+                let s:RBSService = .executeAction(request: req)
+                
+                var url = "\(s.baseURL)\(s.endPoint)?"
+                for param in s.urlParameters {
+                    url = "\(url)\(param.key)=\(param.value)&"
+                }
+                
+                DispatchQueue.main.async {
+                    onSuccess(url)
+                }
+                
+            } catch {
+                
+            }
+        }
+    }
+    
     public func send(action actionName:String,
                      data:[String:Any],
                      onSuccess: @escaping (_ result:[Any]) -> Void,
@@ -443,7 +498,7 @@ public class RBS {
         print("send called")
         
         serialQueue.async {
-
+            
             
             print("send called in async block")
             

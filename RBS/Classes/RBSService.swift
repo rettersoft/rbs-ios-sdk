@@ -10,7 +10,7 @@ import Foundation
 import Moya
 import ObjectMapper
 
-var rbsUrl:String = "https://core.rtbs.io"
+var globalRbsRegion:RbsRegion = .euWest1
 
 enum RBSService {
     
@@ -108,7 +108,15 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     }
     
     var baseURL: URL {
-        URL(string: rbsUrl)!
+        switch self {
+        case .executeAction(let request):
+            if(self.isGetAction(request.actionName)) {
+                return URL(string: globalRbsRegion.getUrl)!
+            }
+            return URL(string: globalRbsRegion.postUrl)!
+        default:
+            return URL(string: globalRbsRegion.postUrl)!
+        }
     }
     var path: String { return self.endPoint }
     var method: Moya.Method { return self.httpMethod }
