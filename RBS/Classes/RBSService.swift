@@ -148,7 +148,13 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
         headers["x-rbs-sdk-client"] = "ios"
         
         switch self {
-        case .executeAction:
+        case .executeAction(let request):
+            if let reqHeaders = request.headers {
+                for h in reqHeaders {
+                    headers[h.key] = h.value
+                }
+            }
+            
             headers["Content-Type"] = "application/json"
             break
         default:

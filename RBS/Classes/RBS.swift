@@ -374,13 +374,14 @@ public class RBS {
         throw "Can't refresh token"
     }
     
-    private func executeAction(tokenData:RBSTokenData, action:String, data:[String:Any]) throws -> [Any] {
+    private func executeAction(tokenData:RBSTokenData, action:String, data:[String:Any], headers:[String:String]?) throws -> [Any] {
         print("executeAction called")
         let req = ExecuteActionRequest()
         req.projectId = self.projectId
         req.accessToken = tokenData.accessToken
         req.actionName = action
         req.payload = data
+        req.headers = headers
         var errorResponse:BaseErrorResponse?
         var retVal:[Any]? = nil
         let semaphoreLocal = DispatchSemaphore(value: 0)
@@ -492,6 +493,7 @@ public class RBS {
     
     public func send(action actionName:String,
                      data:[String:Any],
+                     headers:[String:String]?,
                      onSuccess: @escaping (_ result:[Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
@@ -510,7 +512,7 @@ public class RBS {
                 
                 DispatchQueue.global().async {
                     do {
-                        let actionResult = try self.executeAction(tokenData: tokenData, action: actionName, data: data)
+                        let actionResult = try self.executeAction(tokenData: tokenData, action: actionName, data: data, headers: headers)
                         
                         DispatchQueue.main.async {
                             onSuccess(actionResult)

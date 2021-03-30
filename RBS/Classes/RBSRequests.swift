@@ -59,6 +59,7 @@ class ExecuteActionRequest : Mappable {
     var accessToken:String?
     var actionName:String?
     var payload: [String:Any]?
+    var headers: [String:String]?
     
     
     required init?(map: Map) { }
@@ -72,5 +73,6 @@ class ExecuteActionRequest : Mappable {
         accessToken <- map["accessToken"]
         actionName <- map["actionName"]
         payload <- map["payload"]
+        headers <- map["headers"]
     }
 }

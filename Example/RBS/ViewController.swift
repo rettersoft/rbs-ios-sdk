@@ -65,6 +65,7 @@ class ViewController: UIViewController {
         
         rbs.send(action: "rbs.catalog.get.SEARCH",
                  data: ["searchTerm": "hardal"],
+                 headers: ["deneme": "baran"],
                  onSuccess: { result in
                     print("SEARCH Result: \(result)")
                  },
@@ -99,6 +100,7 @@ class ViewController: UIViewController {
                     "email": "email@test.com",
                     "password": "password"
                  ],
+                 headers: ["deneme": "baran"],
                  onSuccess: { result in
                     print("Result: \(result)")
                     
@@ -119,6 +121,7 @@ class ViewController: UIViewController {
         
         rbs.send(action: "rbs.wms.request.GET_OPTION",
                  data: ["optionId":"MAIN"],
+                 headers: nil,
                  onSuccess: { result in
                     print("Result: \(result)")
                  },
