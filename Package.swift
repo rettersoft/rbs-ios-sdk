@@ -14,6 +14,6 @@ let package = Package(
         
     ],
     targets: [
-        .target(name: "RBS")
+        .target(name: "RBS", path: "RBS/Classes")
     ]
 )
