@@ -21,11 +21,21 @@ You need to have a RTBS projectId.
 
 ## Installation
 
+### Cocoapods
+
 RTBS is available through [CocoaPods](https://cocoapods.org). To install
 it, simply add the following line to your Podfile:
 
 ```ruby
 pod 'RBS'
+```
+
+### Swift Package Manager
+
+You can use swift package manager with following repo url and using main branch:
+
+```
+https://github.com/rettersoft/rbs-ios-sdk
 ```
 
 ## Initialize SDK
