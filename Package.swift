@@ -15,7 +15,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "RBS", dependencies: [
-            "Moya", "Alamofire", "ObjectMapper"
+            "Moya", "Alamofire", "ObjectMapper", "KeychainSwift", "JWTDecode"
         ], path: "RBS/Classes")
     ]
 )
