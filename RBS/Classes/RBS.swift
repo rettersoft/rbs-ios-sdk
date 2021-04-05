@@ -4,6 +4,7 @@ import Moya
 import KeychainSwift
 import ObjectMapper
 import JWTDecode
+import Foundation
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
