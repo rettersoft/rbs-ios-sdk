@@ -14,6 +14,6 @@ let package = Package(
         
     ],
     targets: [
-        .target(name: "RBS", path: "rbs-ios-sdk")
+        .target(name: "RBS")
     ]
 )
