@@ -46,8 +46,8 @@ public struct RBSConfig {
 }
 
 public struct RBSUser {
-    var uid:String
-    var isAnonymous:Bool
+    public var uid:String
+    public var isAnonymous:Bool
 }
 
 struct RBSTokenData : Mappable, Decodable {

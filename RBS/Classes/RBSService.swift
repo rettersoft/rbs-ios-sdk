@@ -92,7 +92,7 @@ enum RBSService {
             }
             
             return .post
-        
+            
         default: return .get
         }
     }
@@ -141,6 +141,14 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
             return .requestParameters(parameters: self.urlParameters, encoding: URLEncoding.default)
         }
     }
+    func getLanguageISO() -> String {
+        let locale = Locale.current
+        guard let languageCode = locale.languageCode,
+              let regionCode = locale.regionCode else {
+            return "en_US"
+        }
+        return languageCode + "_" + regionCode
+    }
     var headers: [String : String]? {
         
         var headers: [String: String] = [:]
@@ -149,7 +157,10 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
         
         switch self {
         case .executeAction(let request):
-            if let reqHeaders = request.headers {
+            if var reqHeaders = request.headers {
+                if(!reqHeaders.keys.contains { $0 == "accept-language" || $0 == "Accept-Language" }) {
+                    reqHeaders["accept-language"] = self.getLanguageISO()
+                }
                 for h in reqHeaders {
                     headers[h.key] = h.value
                 }
