@@ -25,7 +25,7 @@ TODO: Add long description of the pod here.
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'baranbaygan' => 'baran@rettermobile.com' }
-  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => '0.4.7' }
+  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => '0.4.8' }
   # s.version.to_s
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
