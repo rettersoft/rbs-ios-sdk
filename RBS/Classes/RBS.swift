@@ -160,7 +160,6 @@ public class RBS {
                     let jwt = try! decode(jwt: accessToken)
                     if let userId = jwt.claim(name: "userId").string, let anonymous = jwt.claim(name: "anonymous").rawValue as? Bool {
                         
-                        
                         // User has changed.
                         let user = RBSUser(uid: userId, isAnonymous: anonymous)
                         
@@ -169,10 +168,14 @@ public class RBS {
                         } else {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
                         }
-                        
-                        
+                    } else {
+                        self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
                     }
+                } else {
+                    self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
                 }
+            } else {
+                self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
             }
             
         }
