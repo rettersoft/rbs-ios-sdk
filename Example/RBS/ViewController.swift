@@ -26,15 +26,15 @@ class ViewController: UIViewController {
     
     @IBAction func testButtonTapped(_ sender: Any) {
         
-        rbs.generateGetActionUrl(action: "rbs.businessuserauth.get.LOGIN",
-                                 data: [
-                                    "email": "email@test.com",
-                                    "password": "password"
-                                 ]) { url in
-            print("URL \(url)")
-        } onError: { err in
-            
-        }
+//        rbs.generateGetActionUrl(action: "rbs.businessuserauth.get.LOGIN",
+//                                 data: [
+//                                    "email": "email@test.com",
+//                                    "password": "password"
+//                                 ]) { url in
+//            print("URL \(url)")
+//        } onError: { err in
+//
+//        }
 
         
 //        rbs.send(action: "rbs.businessuserauth.request.LOGIN",

@@ -10,6 +10,7 @@ import Foundation
 import Moya
 import ObjectMapper
 
+
 var globalRbsRegion:RbsRegion = .euWest1
 
 enum RBSService {
@@ -100,6 +101,8 @@ enum RBSService {
 
 
 extension RBSService: TargetType, AccessTokenAuthorizable {
+    
+
     
     var authorizationType: AuthorizationType? {
         switch self {

@@ -5,6 +5,7 @@ import KeychainSwift
 import ObjectMapper
 import JWTDecode
 import Foundation
+import TrustKit
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
@@ -210,7 +211,7 @@ public class RBS {
     var config:RBSConfig!
     
     public init(config:RBSConfig) {
-        
+        self.setupTrustKit()
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
@@ -221,6 +222,33 @@ public class RBS {
         get {
             return Date(timeIntervalSinceNow: 30)
         }
+    }
+    
+    func setupTrustKit() {
+        let pinningConfig:[String:Any] = [
+            kTSKEnforcePinning: true,
+            kTSKIncludeSubdomains: true,
+            kTSKExpirationDate: "2025-12-01",
+            kTSKPublicKeyHashes: [
+                "++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI=",
+                "f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE=",
+                "NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k=",
+                "9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U=",
+                "KwccWaCgrnaw6tsrrSO61FgLacNgG2MMLq8GE6+oP5I=",
+                "FfFKxFycfaIz00eRZOgTf+Ne4POK6FgYPwhBDqgqxLQ="
+            ]
+        ]
+        let trustKitConfig = [
+            kTSKSwizzleNetworkDelegates: true,
+            kTSKPinnedDomains: [
+                "core.rtbs.io": pinningConfig,
+                "core-test.rettermobile.com": pinningConfig,
+                "core-internal.rtbs.io": pinningConfig,
+                "core-internal-beta.rtbs.io": pinningConfig
+
+            ]
+        ] as [String : Any]
+        TrustKit.initSharedInstance(withConfiguration:trustKitConfig)
     }
     
     private func getTokenData() throws -> RBSTokenData {

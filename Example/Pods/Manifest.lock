@@ -7,12 +7,14 @@ PODS:
   - Moya/Core (14.0.0):
     - Alamofire (~> 5.0)
   - ObjectMapper (3.5.3)
-  - RBS (0.3.4):
+  - RBS (0.5.0):
     - Alamofire (~> 5.2)
     - JWTDecode (~> 2.4)
     - KeychainSwift (~> 19.0)
     - Moya (~> 14.0)
     - ObjectMapper (~> 3.4)
+    - TrustKit
+  - TrustKit (1.6.5)
 
 DEPENDENCIES:
   - RBS (from `../`)
@@ -24,6 +26,7 @@ SPEC REPOS:
     - KeychainSwift
     - Moya
     - ObjectMapper
+    - TrustKit
 
 EXTERNAL SOURCES:
   RBS:
@@ -35,7 +38,8 @@ SPEC CHECKSUMS:
   KeychainSwift: a06190cf933ad46b1e0abc3d77d29c06331715c7
   Moya: 5b45dacb75adb009f97fde91c204c1e565d31916
   ObjectMapper: 97111c97e054a6ee25917662106689f0b4127b37
-  RBS: 183bfbf25ca35c2f3b7b51e2239d21dc4efaddb1
+  RBS: c605dfd7045981760225a864f9ed1bef9a0f52bc
+  TrustKit: 073855e3adecd317417bda4ac9e9ac54a2e3b9f2
 
 PODFILE CHECKSUM: 5f1ae693af7fc58179c8f35b6e576d08e30f30be
 
