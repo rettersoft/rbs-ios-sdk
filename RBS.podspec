@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RBS'
-  s.version          = '0.5.0'
+  s.version          = '0.5.2'
   s.summary          = 'RBS iOS SDK.'
 
 # This description is used to generate tags and improve search results.
@@ -25,7 +25,7 @@ TODO: Add long description of the pod here.
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'baranbaygan' => 'baran@rettermobile.com' }
-  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => '0.4.8' }
+  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => '0.5.2' }
   # s.version.to_s
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
@@ -45,7 +45,7 @@ TODO: Add long description of the pod here.
   s.dependency 'ObjectMapper', '~> 3.4'
   s.dependency 'KeychainSwift', '~> 19.0'
   s.dependency 'JWTDecode', '~> 2.4'
-  s.dependency 'TrustKit'
-  
+  s.dependency 'TrustKit', '~> 1.7.0'
+  s.dependency 'Starscream', '~> 4.0.0'
   
 end

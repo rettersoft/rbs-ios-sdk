@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "3b7eea955170401685ec7ac0187ef787", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "36229bb229af4983a4bc6ecded2a68d2", region: .euWest1Beta))
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -37,24 +37,16 @@ class ViewController: UIViewController {
 //        }
 
         
-//        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
-//                 data: [
-//                    "email": "email@test.com",
-//                    "password": "password"
-//                 ],
-//                 onSuccess: { result in
-//                    print("Result: \(result)")
-//
-//                    if let serviceResponse = result.first as? [String:Any],
-//                       let resp = serviceResponse["response"] as? [String:Any],
-//
-//                       let customToken = resp["customToken"] as? String {
-//                        self.rbs.authenticateWithCustomToken(customToken)
-//                    }
-//                 },
-//                 onError: { error in
-//                    print("Error Result: \(error)")
-//                 })
+        rbs.send(action: "rbs.process.request.START",
+                 data: ["processId": "MERT_TEST"],
+                 headers: [:],
+                 onSuccess: { result in
+                    print("Result: \(result)")
+
+                 },
+                 onError: { error in
+                    print("Error Result: \(error)")
+                 })
         
     }
     @IBAction func signoutTapped(_ sender: Any) {
@@ -155,6 +147,22 @@ class ViewController: UIViewController {
 }
 
 extension ViewController : RBSClientDelegate {
+    func socketDisconnected() {
+        print("disconnected")
+    }
+    
+    func socketConnected() {
+        print("connected")
+    }
+    
+    func socketEventFired(payload: [String : Any]) {
+        print("event", payload)
+    }
+    
+    func socketErrorOccurred(error: Error?) {
+        print("errorrr: \(error?.localizedDescription)")
+    }
+    
     func rbsClient(client: RBS, authStatusChanged toStatus: RBSClientAuthStatus) {
         
         //        switch toStatus {

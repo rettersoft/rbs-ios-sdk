@@ -6,6 +6,7 @@ import ObjectMapper
 import JWTDecode
 import Foundation
 import TrustKit
+import Starscream
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
@@ -21,6 +22,13 @@ public enum RbsRegion {
         switch self {
         case .euWest1: return "https://core-internal.rtbs.io"
         case .euWest1Beta: return "https://core-internal-beta.rtbs.io"
+        }
+    }
+
+    var socketBaseURL: URLComponents? {
+        switch self {
+        case .euWest1: return URLComponents(string: "wss://socket-test.rtbs.io") 
+        case .euWest1Beta: return URLComponents(string: "wss://socket-test.rtbs.io")
         }
     }
 }
@@ -102,6 +110,10 @@ public enum RBSClientAuthStatus {
 
 public protocol RBSClientDelegate {
     func rbsClient(client:RBS, authStatusChanged toStatus:RBSClientAuthStatus)
+    func socketDisconnected()
+    func socketConnected()
+    func socketEventFired(payload: [String: Any])
+    func socketErrorOccurred(error: Error?)
 }
 
 enum RBSKeychainKey {
@@ -139,7 +151,7 @@ class RBSAction {
 
 
 
-public class RBS {
+public class RBS: WebSocketDelegate {
     
     var projectId:String!
     
@@ -147,7 +159,10 @@ public class RBS {
     
     let semaphore = DispatchSemaphore(value: 0)
     
-    
+    var socket: WebSocket?
+    var isSocketConnected = false
+    var isUserChanged = false
+
     public var delegate:RBSClientDelegate? {
         didSet {
             
@@ -169,14 +184,28 @@ public class RBS {
                         } else {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
                         }
+                        
+                        // initiate the socket if user exists
+                        self.send(action: "CONNECTSOCKET",
+                                  data: [:],
+                                  headers: [:]) { _ in
+                            
+                        } onError: { _ in
+                            
+                        }
+
+                        
                     } else {
                         self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+                        self.disconnectFromSocket()
                     }
                 } else {
                     self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+                    self.disconnectFromSocket()
                 }
             } else {
                 self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+                self.disconnectFromSocket()
             }
             
         }
@@ -215,7 +244,123 @@ public class RBS {
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
+    }
+    
+    private func connectToSocket(withToken token: String?) {
+        if token == nil { // is it possible?
+            return
+        }
+        print("---connecting with token: ", token)
         
+        var components = self.config.region?.socketBaseURL
+        components?.queryItems = [URLQueryItem(name: "auth", value: token)]
+        
+        guard let url = components?.url else { return }
+        
+        // check if the socket is already connected
+        if isSocketConnected {
+            // if url is same with the old one, no need to connect again
+            if let exURL = socket?.request.url, exURL == url {
+                return
+            } else {
+                isUserChanged = true
+                socket?.disconnect()
+            }
+        }
+        
+        print("---socketURL: ", url)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5
+        socket = WebSocket(request: request)
+        
+        socket?.delegate = self
+        socket?.connect()
+        _ = self.semaphore.wait(timeout: .distantFuture)
+    }
+    
+    private func disconnectFromSocket() {
+        socket?.disconnect()
+    }
+    
+    public func didReceive(event: WebSocketEvent, client: WebSocket) {
+        switch event {
+        case .connected(let headers):
+            isSocketConnected = true
+            isUserChanged = false
+            semaphore.signal()
+            delegate?.socketConnected()
+            print("websocket is connected: \(headers)")
+        case .disconnected(let reason, let code):
+            isSocketConnected = false
+            delegate?.socketDisconnected()
+            print("websocket is disconnected: \(reason) with code: \(code)")
+            if !isUserChanged { // if user not changed, reconnect to the connect
+                reconnectSocket()
+            }
+        case .text(let string):
+            print("Received text: \(string)")
+            delegate?.socketEventFired(payload: ["text": string])
+        case .binary(let data):
+            delegate?.socketEventFired(payload: ["data": data])
+            print("Received data: \(data.count)")
+        case .ping(_):
+            break
+        case .pong(_):
+            break
+        case .viabilityChanged(_):
+            break
+        case .reconnectSuggested(let isTrue):
+            isSocketConnected = false
+            if isTrue {
+                socket?.connect()
+            }
+        case .cancelled:
+            isSocketConnected = false
+            delegate?.socketDisconnected()
+            reconnectSocket()
+        case .error(let error):
+            print("---", error, error.debugDescription, error?.localizedDescription)
+            isSocketConnected = false
+            semaphore.signal()
+            delegate?.socketErrorOccurred(error: error)
+        }
+    }
+    
+//    public func sendSocketMessage(text: String,
+//                                  completionHandler: @escaping (_ isSuccessful: Bool) -> Void) {
+//        if isSocketConnected {
+//            do {
+//                let tokenData = try getTokenData()
+//                let params = ["action": "rbs.core.request.SEND_TO_SOCKET",
+//                              "userId": "\(tokenData.uid ?? "")",
+//                              "message": text]
+//                let encoder = JSONEncoder()
+//                if let jsonData = try? encoder.encode(params) {
+//                    if let jsonString = String(data: jsonData, encoding: .utf8) {
+//                        socket?.write(string: jsonString) {
+//                            completionHandler(true)
+//                        }
+//                    } else { completionHandler(false) }
+//                } else { completionHandler(false) }
+//            } catch {
+//                print("An error occured while getting token data: \(error.localizedDescription)")
+//                completionHandler(false)
+//            }
+//
+//        } else { completionHandler(false) }
+//    }
+    
+    private func reconnectSocket() {
+        // if no token exists, no need to reconnect to the socket - signOut case
+        if let _ = self.keychain.getData(RBSKeychainKey.token.keyName) {
+            self.send(action: "CONNECTSOCKET",
+                      data: [:],
+                      headers: [:]) { _ in
+                
+            } onError: { _ in
+                
+            }
+        }
     }
     
     private var safeNow:Date {
@@ -318,6 +463,7 @@ public class RBS {
             }
             
             self.keychain.delete(RBSKeychainKey.token.keyName)
+            self.disconnectFromSocket()
             
             return
         }
@@ -541,7 +687,11 @@ public class RBS {
                 let tokenData = try self.getTokenData()
                 
                 self.saveTokenData(tokenData: tokenData)
+                self.connectToSocket(withToken: tokenData.accessToken)
                 
+                if actionName == "CONNECTSOCKET" {
+                    return
+                }
                 DispatchQueue.global().async {
                     do {
                         let actionResult = try self.executeAction(tokenData: tokenData, action: actionName, data: data, headers: headers)
