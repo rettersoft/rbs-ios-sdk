@@ -162,6 +162,7 @@ public class RBS: WebSocketDelegate {
     var socket: WebSocket?
     var isSocketConnected = false
     var isUserChanged = false
+    let socketSemaphore = DispatchSemaphore(value: 0)
 
     public var delegate:RBSClientDelegate? {
         didSet {
@@ -244,6 +245,21 @@ public class RBS: WebSocketDelegate {
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
+        
+        let notificationCenter = NotificationCenter.default
+        notificationCenter.addObserver(self, selector: #selector(appMovedToBackground), name: NSNotification.Name.UIApplicationWillResignActive, object: nil)
+        notificationCenter.addObserver(self, selector: #selector(appMovedToForeground), name: NSNotification.Name.UIApplicationWillEnterForeground, object: nil)
+    }
+    
+    @objc func appMovedToBackground() {
+        // disconnect socket while entering background
+        isUserChanged = true
+        disconnectFromSocket()
+    }
+    
+    @objc func appMovedToForeground() {
+        // reconnect socket while entering foreground
+        reconnectSocket()
     }
     
     private func connectToSocket(withToken token: String?) {
@@ -251,7 +267,7 @@ public class RBS: WebSocketDelegate {
             return
         }
         print("---connecting with token: ", token)
-        
+            
         var components = self.config.region?.socketBaseURL
         components?.queryItems = [URLQueryItem(name: "auth", value: token)]
         
@@ -275,7 +291,7 @@ public class RBS: WebSocketDelegate {
         
         socket?.delegate = self
         socket?.connect()
-        _ = self.semaphore.wait(timeout: .distantFuture)
+        _ = self.socketSemaphore.wait(timeout: .distantFuture)
     }
     
     private func disconnectFromSocket() {
@@ -287,7 +303,7 @@ public class RBS: WebSocketDelegate {
         case .connected(let headers):
             isSocketConnected = true
             isUserChanged = false
-            semaphore.signal()
+            socketSemaphore.signal()
             delegate?.socketConnected()
             print("websocket is connected: \(headers)")
         case .disconnected(let reason, let code):
@@ -304,24 +320,28 @@ public class RBS: WebSocketDelegate {
             delegate?.socketEventFired(payload: ["data": data])
             print("Received data: \(data.count)")
         case .ping(_):
+            print("---ping")
             break
         case .pong(_):
+            print("---pong")
             break
         case .viabilityChanged(_):
             break
         case .reconnectSuggested(let isTrue):
             isSocketConnected = false
             if isTrue {
-                socket?.connect()
+                reconnectSocket()
             }
         case .cancelled:
             isSocketConnected = false
             delegate?.socketDisconnected()
-            reconnectSocket()
+            if !isUserChanged { // if user not changed, reconnect to the connect
+                reconnectSocket()
+            }
         case .error(let error):
             print("---", error, error.debugDescription, error?.localizedDescription)
             isSocketConnected = false
-            semaphore.signal()
+            socketSemaphore.signal()
             delegate?.socketErrorOccurred(error: error)
         }
     }
