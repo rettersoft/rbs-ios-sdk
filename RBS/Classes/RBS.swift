@@ -245,7 +245,7 @@ public class RBS {
                 "core-test.rettermobile.com": pinningConfig,
                 "core-internal.rtbs.io": pinningConfig,
                 "core-internal-beta.rtbs.io": pinningConfig
-
+                
             ]
         ] as [String : Any]
         TrustKit.initSharedInstance(withConfiguration:trustKitConfig)
@@ -489,6 +489,24 @@ public class RBS {
         self.saveTokenData(tokenData: nil)
     }
     
+    
+    public func generatePublicGetActionUrl(action actionName:String,
+                                           data:[String:Any]) -> String {
+        
+        let req = ExecuteActionRequest()
+        req.projectId = self.projectId
+        req.actionName = actionName
+        req.payload = data
+        
+        let s:RBSService = .executeAction(request: req)
+        
+        var url = "\(s.baseURL)\(s.endPoint)?"
+        for param in s.urlParameters {
+            url = "\(url)\(param.key)=\(param.value)&"
+        }
+        
+        return url
+    }
     
     public func generateGetActionUrl(action actionName:String,
                                      data:[String:Any],

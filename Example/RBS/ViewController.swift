@@ -26,42 +26,49 @@ class ViewController: UIViewController {
     
     @IBAction func testButtonTapped(_ sender: Any) {
         
-//        rbs.generateGetActionUrl(action: "rbs.businessuserauth.get.LOGIN",
-//                                 data: [
-//                                    "email": "email@test.com",
-//                                    "password": "password"
-//                                 ]) { url in
-//            print("URL \(url)")
-//        } onError: { err in
-//
-//        }
-
+        let url = rbs.generatePublicGetActionUrl(action: "rbs.businessuserauth.get.LOGIN", data: [
+            "email": "email@test.com",
+            "password": "password"
+        ])
         
-//        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
-//                 data: [
-//                    "email": "email@test.com",
-//                    "password": "password"
-//                 ],
-//                 onSuccess: { result in
-//                    print("Result: \(result)")
-//
-//                    if let serviceResponse = result.first as? [String:Any],
-//                       let resp = serviceResponse["response"] as? [String:Any],
-//
-//                       let customToken = resp["customToken"] as? String {
-//                        self.rbs.authenticateWithCustomToken(customToken)
-//                    }
-//                 },
-//                 onError: { error in
-//                    print("Error Result: \(error)")
-//                 })
+        print("URL is \(url)")
+        
+        //        rbs.generateGetActionUrl(action: "rbs.businessuserauth.get.LOGIN",
+        //                                 data: [
+        //                                    "email": "email@test.com",
+        //                                    "password": "password"
+        //                                 ]) { url in
+        //            print("URL \(url)")
+        //        } onError: { err in
+        //
+        //        }
+        
+        
+        //        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
+        //                 data: [
+        //                    "email": "email@test.com",
+        //                    "password": "password"
+        //                 ],
+        //                 onSuccess: { result in
+        //                    print("Result: \(result)")
+        //
+        //                    if let serviceResponse = result.first as? [String:Any],
+        //                       let resp = serviceResponse["response"] as? [String:Any],
+        //
+        //                       let customToken = resp["customToken"] as? String {
+        //                        self.rbs.authenticateWithCustomToken(customToken)
+        //                    }
+        //                 },
+        //                 onError: { error in
+        //                    print("Error Result: \(error)")
+        //                 })
         
     }
     @IBAction func signoutTapped(_ sender: Any) {
         rbs.signOut()
     }
     @IBAction func searchProducts(_ sender: Any) {
-
+        
         
         rbs.send(action: "rbs.catalog.get.SEARCH",
                  data: ["searchTerm": "hardal"],
@@ -72,25 +79,25 @@ class ViewController: UIViewController {
                  onError: { error in
                     print("SEARCH Error Result: \(error)")
                  })
-//
-//        rbs.send(action: "rbs.catalog.get.SEARCH",
-//                 data: ["searchTerm": "hardal"],
-//                 onSuccess: { result in
-//                    print("SEARCH Result success")
-//                 },
-//                 onError: { error in
-//                    print("SEARCH Error Result: \(error)")
-//                 })
-//
-//
-//                rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
-//                         data: ["searchTerm": "hardal"],
-//                         onSuccess: { result in
-//                            print("GET_CATEGORIES Result success")
-//                         },
-//                         onError: { error in
-//                            print("GET_CATEGORIES Error Result: \(error)")
-//                         })
+        //
+        //        rbs.send(action: "rbs.catalog.get.SEARCH",
+        //                 data: ["searchTerm": "hardal"],
+        //                 onSuccess: { result in
+        //                    print("SEARCH Result success")
+        //                 },
+        //                 onError: { error in
+        //                    print("SEARCH Error Result: \(error)")
+        //                 })
+        //
+        //
+        //                rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
+        //                         data: ["searchTerm": "hardal"],
+        //                         onSuccess: { result in
+        //                            print("GET_CATEGORIES Result success")
+        //                         },
+        //                         onError: { error in
+        //                            print("GET_CATEGORIES Error Result: \(error)")
+        //                         })
         
         
     }

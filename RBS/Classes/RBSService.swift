@@ -54,9 +54,10 @@ enum RBSService {
         case .getAnonymToken(let request):
             return [
                 "projectId": request.projectId!,
+                "platform": "IOS"
             ]
-        case .refreshToken(let request): return ["refreshToken":request.refreshToken!]
-        case .authWithCustomToken(let request): return ["customToken": request.customToken!]
+        case .refreshToken(let request): return ["refreshToken":request.refreshToken!, "platform": "IOS"]
+        case .authWithCustomToken(let request): return ["customToken": request.customToken!, "platform": "IOS"]
             
         case .executeAction(let request):
             
@@ -68,14 +69,13 @@ enum RBSService {
                     let dataBase64 = data.base64EncodedString().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
                     return [
                         "auth": accessToken,
-                        
+                        "platform": "IOS",
                         "data": dataBase64!
                     ]
                 }
                 
                 return [
                     "auth": accessToken,
-                    
                 ]
                 
             } else {
