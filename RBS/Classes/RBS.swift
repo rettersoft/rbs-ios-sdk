@@ -31,6 +31,7 @@ public struct RBSConfig {
     var developerId:String?
     var serviceId:String?
     var region: RbsRegion?
+    var sslPinningEnabled: Bool?
     
     public init(projectId:String,
                 secretKey:String? = nil,
@@ -211,7 +212,13 @@ public class RBS {
     var config:RBSConfig!
     
     public init(config:RBSConfig) {
-        self.setupTrustKit()
+        if let sslPinningEnabled = config.sslPinningEnabled, sslPinningEnabled == false {
+            // Dont enable ssl pinning
+            print("WARNING! RBS SSL Pinning disabled.")
+        } else {
+            self.setupTrustKit()
+        }
+        
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
