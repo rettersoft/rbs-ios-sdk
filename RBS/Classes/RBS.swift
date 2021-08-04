@@ -37,13 +37,15 @@ public struct RBSConfig {
                 secretKey:String? = nil,
                 developerId:String? = nil,
                 serviceId:String? = nil,
-                region:RbsRegion? = nil) {
+                region:RbsRegion? = nil,
+                sslPinningEnabled:Bool? = nil) {
         
         self.projectId = projectId
         self.secretKey = secretKey
         self.developerId = developerId
         self.serviceId = serviceId
         self.region = region == nil ? .euWest1 : region
+        self.sslPinningEnabled = sslPinningEnabled
     }
 }
 
