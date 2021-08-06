@@ -161,7 +161,7 @@ public class RBS: WebSocketDelegate {
     
     var socket: WebSocket?
     var isSocketConnected = false
-    var isUserChanged = false
+    var nonSocketChangeHappened = false // to follow changes that not related to socket. ex.: background, businessAuth
     let socketSemaphore = DispatchSemaphore(value: 0)
 
     public var delegate:RBSClientDelegate? {
@@ -253,7 +253,7 @@ public class RBS: WebSocketDelegate {
     
     @objc func appMovedToBackground() {
         // disconnect socket while entering background
-        isUserChanged = true
+        nonSocketChangeHappened = true
         disconnectFromSocket()
     }
     
@@ -279,7 +279,7 @@ public class RBS: WebSocketDelegate {
             if let exURL = socket?.request.url, exURL == url {
                 return
             } else {
-                isUserChanged = true
+                nonSocketChangeHappened = true
                 socket?.disconnect()
             }
         }
@@ -302,7 +302,7 @@ public class RBS: WebSocketDelegate {
         switch event {
         case .connected(let headers):
             isSocketConnected = true
-            isUserChanged = false
+            nonSocketChangeHappened = false
             socketSemaphore.signal()
             delegate?.socketConnected()
             print("websocket is connected: \(headers)")
@@ -310,7 +310,7 @@ public class RBS: WebSocketDelegate {
             isSocketConnected = false
             delegate?.socketDisconnected()
             print("websocket is disconnected: \(reason) with code: \(code)")
-            if !isUserChanged { // if user not changed, reconnect to the connect
+            if !nonSocketChangeHappened { // if a non-socket change happened, reconnect to the connect
                 reconnectSocket()
             }
         case .text(let string):
@@ -335,10 +335,10 @@ public class RBS: WebSocketDelegate {
         case .cancelled:
             isSocketConnected = false
             delegate?.socketDisconnected()
-            if !isUserChanged { // if user not changed, reconnect to the connect
+            if !nonSocketChangeHappened { // if a non-socket change happened, reconnect to the connect
                 reconnectSocket()
             }
-        case .error(let error):
+        case .error(let error): // TODO: we should handle this case
             print("---", error, error.debugDescription, error?.localizedDescription)
             isSocketConnected = false
             socketSemaphore.signal()
