@@ -13,9 +13,55 @@ class ViewController: UIViewController {
     
     let rbs = RBS(config: RBSConfig(projectId: "36229bb229af4983a4bc6ecded2a68d2", region: .euWest1Beta))
     
+    lazy var testLabel: UILabel = {
+        let label = UILabel()
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .boldSystemFont(ofSize: 15)
+        label.numberOfLines = 0
+        return label
+    }()
+    
+    lazy var socketButton: UIButton = {
+        let button = UIButton()
+        button.setTitle("Socket Button", for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.cornerRadius = 25
+        button.layer.borderWidth = 1
+        return button
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         rbs.delegate = self
+        
+        view.addSubview(testLabel)
+        NSLayoutConstraint.activate([testLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                                     testLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 180),
+                                     testLabel.widthAnchor.constraint(equalToConstant: 200),
+                                     testLabel.heightAnchor.constraint(equalToConstant: 180)])
+        
+        view.addSubview(socketButton)
+        NSLayoutConstraint.activate([socketButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                                     socketButton.bottomAnchor.constraint(equalTo: testLabel.topAnchor, constant: -10),
+                                     socketButton.widthAnchor.constraint(equalToConstant: 150),
+                                     socketButton.heightAnchor.constraint(equalToConstant: 50)])
+        
+        socketButton.addTarget(self, action: #selector(socketButtonTapped), for: .touchUpInside)
+    }
+    
+    @objc func socketButtonTapped() {
+        rbs.send(action: "rbs.process.request.START",
+                 data: ["processId": "MERT_TEST"],
+                 headers: [:],
+                 onSuccess: { result in
+                    print("Result: \(result)")
+
+                 },
+                 onError: { error in
+                    print("Error Result: \(error)")
+                 })
     }
     
     override func didReceiveMemoryWarning() {
@@ -149,14 +195,22 @@ class ViewController: UIViewController {
 extension ViewController : RBSClientDelegate {
     func socketDisconnected() {
         print("disconnected")
+        testLabel.textColor = .red
+        testLabel.text = "Disconnected!"
     }
     
     func socketConnected() {
         print("connected")
+        testLabel.textColor = .green
+        testLabel.text = "Connected!"
     }
     
     func socketEventFired(payload: [String : Any]) {
         print("event", payload)
+        testLabel.textColor = .blue
+        if let text = payload["text"] as? String {
+            testLabel.text = text
+        }
     }
     
     func socketErrorOccurred(error: Error?) {
