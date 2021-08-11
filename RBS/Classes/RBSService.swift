@@ -61,7 +61,9 @@ enum RBSService {
             
         case .executeAction(let request):
             
-            if let accessToken = request.accessToken, let action = request.actionName {
+            if let action = request.actionName {
+               
+                let accessToken = request.accessToken != nil ? request.accessToken! : ""
                 
                 if(self.isGetAction(action)) {
                     let payload: [String:Any] = request.payload == nil ? [:] : request.payload!
@@ -79,7 +81,9 @@ enum RBSService {
                 ]
                 
             } else {
+                
                 return [:]
+                
             }
         }
     }
