@@ -60,6 +60,7 @@ class ExecuteActionRequest : Mappable {
     var actionName:String?
     var payload: [String:Any]?
     var headers: [String:String]?
+    var culture: String?
     
     
     required init?(map: Map) { }
@@ -74,5 +75,6 @@ class ExecuteActionRequest : Mappable {
         actionName <- map["actionName"]
         payload <- map["payload"]
         headers <- map["headers"]
+        culture <- map["culture"]
     }
 }
