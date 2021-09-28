@@ -103,6 +103,11 @@ public enum RBSClientAuthStatus {
          authenticating
 }
 
+public enum RBSCulture: String {
+    case en = "en-US",
+         tr = "tr-TR"
+}
+
 public protocol RBSClientDelegate {
     func rbsClient(client:RBS, authStatusChanged toStatus:RBSClientAuthStatus)
 }
@@ -415,7 +420,13 @@ public class RBS {
         throw "Can't refresh token"
     }
     
-    private func executeAction(tokenData:RBSTokenData, action:String, data:[String:Any], headers:[String:String]?) throws -> [Any] {
+    private func executeAction(
+        tokenData:RBSTokenData,
+        action:String,
+        data:[String:Any],
+        culture: String?,
+        headers:[String:String]?
+    ) throws -> [Any] {
         print("executeAction called")
         let req = ExecuteActionRequest()
         req.projectId = self.projectId
@@ -553,13 +564,13 @@ public class RBS {
     public func send(action actionName:String,
                      data:[String:Any],
                      headers:[String:String]?,
+                     culture: RBSCulture? = nil,
                      onSuccess: @escaping (_ result:[Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
         print("send called")
         
         serialQueue.async {
-            
             
             print("send called in async block")
             
@@ -571,7 +582,13 @@ public class RBS {
                 
                 DispatchQueue.global().async {
                     do {
-                        let actionResult = try self.executeAction(tokenData: tokenData, action: actionName, data: data, headers: headers)
+                        let actionResult = try self.executeAction(
+                            tokenData: tokenData,
+                            action: actionName,
+                            data: data,
+                            culture: culture?.rawValue,
+                            headers: headers
+                        )
                         
                         DispatchQueue.main.async {
                             onSuccess(actionResult)
@@ -582,23 +599,10 @@ public class RBS {
                         }
                     }
                 }
-                
-                
+
             } catch {
                 
             }
-            
-            
-            
-            
-            
         }
-        
     }
 }
-
-
-
-
-
-

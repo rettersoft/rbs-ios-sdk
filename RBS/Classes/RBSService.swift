@@ -35,7 +35,14 @@ enum RBSService {
     var body: [String:Any] {
         switch self {
         case .executeAction(let request):
-            if let payload = request.payload {
+            if var payload = request.payload {
+                if let action = request.actionName {
+                    if !isGetAction(action) {
+                        if let culture = request.culture {
+                            payload["culture"] = culture
+                        }
+                    }
+                }
                 return payload
             }
             return [:]
@@ -69,11 +76,17 @@ enum RBSService {
                     let payload: [String:Any] = request.payload == nil ? [:] : request.payload!
                     let data: Data = try! JSONSerialization.data(withJSONObject:payload, options: JSONSerialization.WritingOptions.prettyPrinted)
                     let dataBase64 = data.base64EncodedString().addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-                    return [
+                    var parameters =  [
                         "auth": accessToken,
                         "platform": "IOS",
                         "data": dataBase64!
                     ]
+                    
+                    if let culture = request.culture {
+                        parameters["culture"] = culture
+                    }
+                    
+                    return parameters
                 }
                 
                 return [
