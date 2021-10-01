@@ -35,14 +35,7 @@ enum RBSService {
     var body: [String:Any] {
         switch self {
         case .executeAction(let request):
-            if var payload = request.payload {
-                if let action = request.actionName {
-                    if !isGetAction(action) {
-                        if let culture = request.culture {
-                            payload["culture"] = culture
-                        }
-                    }
-                }
+            if let payload = request.payload {
                 return payload
             }
             return [:]
@@ -87,11 +80,14 @@ enum RBSService {
                     }
                     
                     return parameters
+                } else {
+                    var parameters = ["auth": accessToken]
+                    if let culture = request.culture {
+                        parameters["culture"] = culture
+                    }
+                    
+                    return parameters
                 }
-                
-                return [
-                    "auth": accessToken,
-                ]
                 
             } else {
                 

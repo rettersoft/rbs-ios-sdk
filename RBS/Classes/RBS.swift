@@ -434,6 +434,8 @@ public class RBS {
         req.actionName = action
         req.payload = data
         req.headers = headers
+        req.culture = culture
+
         var errorResponse:BaseErrorResponse?
         var retVal:[Any]? = nil
         let semaphoreLocal = DispatchSemaphore(value: 0)
