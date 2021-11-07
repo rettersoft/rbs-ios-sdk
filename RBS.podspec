@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RBS'
-  s.version          = '0.5.11'
+  s.version          = '0.5.12'
   s.summary          = 'RBS iOS SDK.'
 
 # This description is used to generate tags and improve search results.
@@ -25,7 +25,7 @@ TODO: Add long description of the pod here.
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'baranbaygan' => 'baran@rettermobile.com' }
-  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => '0.5.11' }
+  s.source           = { :git => 'https://github.com/rettersoft/rbs-ios-sdk.git', :tag => '0.5.12' }
   # s.version.to_s
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
@@ -38,7 +38,8 @@ TODO: Add long description of the pod here.
   # }
 
   # s.public_header_files = 'Pod/Classes/**/*.h'
-#  s.frameworks = 'CommonCrypto'
+  # s.frameworks = 'CommonCrypto'
+  s.static_framework = true
   # s.dependency 'AFNetworking', '~> 2.3'
   s.dependency 'Moya', '~> 14.0'
   s.dependency 'Alamofire', '~> 5.2'
@@ -46,6 +47,8 @@ TODO: Add long description of the pod here.
   s.dependency 'KeychainSwift', '~> 19.0'
   s.dependency 'JWTDecode', '~> 2.4'
   s.dependency 'TrustKit'
-  
+  s.dependency 'Firebase'
+  s.dependency 'Firebase/Firestore'
+  s.dependency 'FirebaseFirestoreSwift'
   
 end

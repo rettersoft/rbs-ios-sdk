@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "3b7eea955170401685ec7ac0187ef787", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "048dbf4ab878487895129a0c778e7996", region: .euWest1Beta, cloud: RBSCloud(classID: "class1", instanceID: "instance1")))
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -98,6 +98,14 @@ class ViewController: UIViewController {
         //                         onError: { error in
         //                            print("GET_CATEGORIES Error Result: \(error)")
         //                         })
+        
+        
+        rbs.subscribeToCloud(with: .role) { (event) in
+            print(event)
+        } errorFired: { (error) in
+            print("Error from cloud: \(error)")
+        }
+
         
         
     }

@@ -1,6 +1,6 @@
 {
   "name": "RBS",
-  "version": "0.5.0",
+  "version": "0.5.12",
   "summary": "RBS iOS SDK.",
   "description": "TODO: Add long description of the pod here.",
   "homepage": "https://github.com/rettersoft/rbs-ios-sdk",
@@ -13,12 +13,13 @@
   },
   "source": {
     "git": "https://github.com/rettersoft/rbs-ios-sdk.git",
-    "tag": "0.4.8"
+    "tag": "0.5.12"
   },
   "platforms": {
-    "ios": "10.0"
+    "ios": "11.0"
   },
   "source_files": "RBS/Classes/**/*",
+  "static_framework": true,
   "dependencies": {
     "Moya": [
       "~> 14.0"
@@ -36,6 +37,15 @@
       "~> 2.4"
     ],
     "TrustKit": [
+
+    ],
+    "Firebase": [
+
+    ],
+    "Firebase/Firestore": [
+
+    ],
+    "FirebaseFirestoreSwift": [
 
     ]
   }

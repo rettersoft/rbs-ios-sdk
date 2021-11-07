@@ -6,6 +6,8 @@ import ObjectMapper
 import JWTDecode
 import Foundation
 import TrustKit
+import FirebaseCore
+import FirebaseFirestore
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
@@ -32,19 +34,24 @@ public struct RBSConfig {
     var serviceId:String?
     var region: RbsRegion?
     var sslPinningEnabled: Bool?
+    var cloud: RBSCloud?
     
-    public init(projectId:String,
-                secretKey:String? = nil,
-                developerId:String? = nil,
-                serviceId:String? = nil,
-                region:RbsRegion? = nil,
-                sslPinningEnabled:Bool? = nil) {
+    public init(
+        projectId: String,
+        secretKey: String? = nil,
+        developerId: String? = nil,
+        serviceId: String? = nil,
+        region: RbsRegion? = nil,
+        cloud: RBSCloud? = nil,
+        sslPinningEnabled:Bool? = nil
+    ) {
         
         self.projectId = projectId
         self.secretKey = secretKey
         self.developerId = developerId
         self.serviceId = serviceId
         self.region = region == nil ? .euWest1 : region
+        self.cloud = cloud
         self.sslPinningEnabled = sslPinningEnabled
     }
 }
@@ -55,14 +62,11 @@ public struct RBSUser {
 }
 
 struct RBSTokenData : Mappable, Decodable {
-    
     var projectId: String?
     var isAnonym: Bool?
     var uid: String?
     var accessToken: String?
     var refreshToken: String?
-    
-    
     
     var accessTokenExpiresAt: Date? {
         get {
@@ -108,6 +112,22 @@ public enum RBSCulture: String {
          tr = "tr-TR"
 }
 
+public struct RBSCloud {
+    let classID: String
+    let instanceID: String?
+    
+    public init(classID: String, instanceID: String?) {
+        self.classID = classID
+        self.instanceID = instanceID
+    }
+}
+
+public enum RBSCloudEvent {
+    case role,
+         user,
+         `public`
+}
+
 public protocol RBSClientDelegate {
     func rbsClient(client:RBS, authStatusChanged toStatus:RBSClientAuthStatus)
 }
@@ -125,7 +145,9 @@ enum RBSKeychainKey {
 }
 
 enum RBSError : Error {
-    case TokenError
+    case TokenError,
+         cloudNotConfigured,
+         noCloudSnapFound
 }
 
 extension String: LocalizedError {
@@ -140,21 +162,15 @@ class RBSAction {
     var action: String?
     var data: [String:Any]?
     
-    init() {
-        
-    }
+    init() { }
 }
 
-
-
 public class RBS {
-    
     var projectId:String!
     
     let serialQueue = DispatchQueue(label: "com.queue.Serial")
     
     let semaphore = DispatchSemaphore(value: 0)
-    
     
     public var delegate:RBSClientDelegate? {
         didSet {
@@ -191,8 +207,7 @@ public class RBS {
     }
     
     var _service:MoyaProvider<RBSService>?
-    var service:MoyaProvider<RBSService>
-    {
+    var service :MoyaProvider<RBSService> {
         get {
             if self._service != nil {
                 return self._service!
@@ -213,10 +228,11 @@ public class RBS {
         }
     }
     
-    
     let keychain = KeychainSwift()
     
-    var config:RBSConfig!
+    var config: RBSConfig!
+    
+    private var db: Firestore?
     
     public init(config:RBSConfig) {
         if let sslPinningEnabled = config.sslPinningEnabled, sslPinningEnabled == false {
@@ -230,6 +246,28 @@ public class RBS {
         self.projectId = config.projectId
         globalRbsRegion = config.region!
         
+        guard config.cloud != nil else {
+            return
+        }
+        
+        let firebaseOptions = FirebaseOptions(
+            googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
+            gcmSenderID: "814752823492"
+        )
+        firebaseOptions.projectID = "rtbs-c82e1"
+        firebaseOptions.apiKey = "AIzaSyCAbRGoJSyRHoO5Od-QRktSbRpSny0ebbM"
+        
+        FirebaseApp.configure(name: "rbs", options: firebaseOptions)
+        
+        guard let app = FirebaseApp.app(name: "rbs") else {
+            return
+        }
+        
+        db = Firestore.firestore(app: app)
+        
+//        db.document("/projects/project1/classes/User/instances/sECeUWwvBPvM2Obg5KKG").addSnapshotListener { (snap, err) in
+//            print("\(snap?.data())")
+//        }
     }
     
     private var safeNow:Date {
@@ -560,6 +598,47 @@ public class RBS {
             } catch {
                 
             }
+        }
+    }
+    
+    public func subscribeToCloud(
+        with event: RBSCloudEvent,
+        eventFired: @escaping ([String: Any]) -> Void,
+        errorFired: @escaping (Error) -> Void
+    ) {
+        guard let database = db,
+              let cloud = config.cloud else {
+            errorFired(RBSError.cloudNotConfigured)
+            return
+        }
+        //        db.document("/projects/project1/classes/User/instances/sECeUWwvBPvM2Obg5KKG").addSnapshotListener { (snap, err) in
+        //            print("\(snap?.data())")
+        //        }
+        var path = "/projects/project1/classes/\(cloud.classID)/instances"
+        if let instance = cloud.instanceID {
+            path.append("/\(instance)")
+        }
+        switch event {
+        case .role:
+            path.append("/roleState/role1")
+        case .user:
+            path.append("/userState")
+        case .public:
+            path.append("/pathState")
+        }
+        
+        database.document(path).addSnapshotListener { (snap, error) in
+            guard error == nil else {
+                errorFired(error!)
+                return
+            }
+            
+            guard let dataSnap = snap?.data() else {
+                errorFired(RBSError.noCloudSnapFound)
+                return
+            }
+            
+            eventFired(dataSnap)
         }
     }
     
