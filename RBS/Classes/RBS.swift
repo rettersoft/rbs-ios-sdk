@@ -34,7 +34,6 @@ public struct RBSConfig {
     var serviceId:String?
     var region: RbsRegion?
     var sslPinningEnabled: Bool?
-    var cloud: RBSCloud?
     
     public init(
         projectId: String,
@@ -42,7 +41,6 @@ public struct RBSConfig {
         developerId: String? = nil,
         serviceId: String? = nil,
         region: RbsRegion? = nil,
-        cloud: RBSCloud? = nil,
         sslPinningEnabled:Bool? = nil
     ) {
         
@@ -51,7 +49,6 @@ public struct RBSConfig {
         self.developerId = developerId
         self.serviceId = serviceId
         self.region = region == nil ? .euWest1 : region
-        self.cloud = cloud
         self.sslPinningEnabled = sslPinningEnabled
     }
 }
@@ -112,22 +109,6 @@ public enum RBSCulture: String {
          tr = "tr-TR"
 }
 
-public struct RBSCloud {
-    let classID: String
-    let instanceID: String?
-    
-    public init(classID: String, instanceID: String?) {
-        self.classID = classID
-        self.instanceID = instanceID
-    }
-}
-
-public enum RBSCloudEvent {
-    case role,
-         user,
-         `public`
-}
-
 public protocol RBSClientDelegate {
     func rbsClient(client:RBS, authStatusChanged toStatus:RBSClientAuthStatus)
 }
@@ -171,6 +152,8 @@ public class RBS {
     let serialQueue = DispatchQueue(label: "com.queue.Serial")
     
     let semaphore = DispatchSemaphore(value: 0)
+    
+    private var cloudObjects: [RBSCloudObject] = []
     
     public var delegate:RBSClientDelegate? {
         didSet {
@@ -246,10 +229,6 @@ public class RBS {
         self.projectId = config.projectId
         globalRbsRegion = config.region!
         
-        guard config.cloud != nil else {
-            return
-        }
-        
         let firebaseOptions = FirebaseOptions(
             googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
             gcmSenderID: "814752823492"
@@ -264,10 +243,6 @@ public class RBS {
         }
         
         db = Firestore.firestore(app: app)
-        
-//        db.document("/projects/project1/classes/User/instances/sECeUWwvBPvM2Obg5KKG").addSnapshotListener { (snap, err) in
-//            print("\(snap?.data())")
-//        }
     }
     
     private var safeNow:Date {
@@ -601,45 +576,31 @@ public class RBS {
         }
     }
     
-    public func subscribeToCloud(
-        with event: RBSCloudEvent,
-        eventFired: @escaping ([String: Any]) -> Void,
-        errorFired: @escaping (Error) -> Void
+    public func getCloudObject(
+        classID: String,
+        instanceID: String?,
+        onSuccess: @escaping (RBSCloudObject) -> Void,
+        onError: @escaping (Error) -> Void
     ) {
-        guard let database = db,
-              let cloud = config.cloud else {
-            errorFired(RBSError.cloudNotConfigured)
-            return
+        if let object = cloudObjects.filter({ $0.classID == classID && $0.instanceID == instanceID }).first {
+            onSuccess(object)
+        } else {
+            let object = RBSCloudObject(projectID: projectId, classID: classID, instanceID: instanceID ?? "", db: db)
+            cloudObjects.append(object)
+            onSuccess(object)
         }
-        //        db.document("/projects/project1/classes/User/instances/sECeUWwvBPvM2Obg5KKG").addSnapshotListener { (snap, err) in
-        //            print("\(snap?.data())")
-        //        }
-        var path = "/projects/project1/classes/\(cloud.classID)/instances"
-        if let instance = cloud.instanceID {
-            path.append("/\(instance)")
-        }
-        switch event {
-        case .role:
-            path.append("/roleState/role1")
-        case .user:
-            path.append("/userState")
-        case .public:
-            path.append("/pathState")
-        }
-        
-        database.document(path).addSnapshotListener { (snap, error) in
-            guard error == nil else {
-                errorFired(error!)
-                return
-            }
-            
-            guard let dataSnap = snap?.data() else {
-                errorFired(RBSError.noCloudSnapFound)
-                return
-            }
-            
-            eventFired(dataSnap)
-        }
+
+//        send(
+//            action: "",
+//            data: [:],
+//            headers: [:]
+//        ) { (response) in
+//
+//            onSuccess(RBSCloudObject(classID: classID, instanceID: instanceID ?? ""))
+//        } onError: { (error) in
+//            onError(error)
+//        }
+
     }
     
     public func send(action actionName:String,
@@ -686,4 +647,109 @@ public class RBS {
             }
         }
     }
+}
+
+public class RBSCloudObject {
+    public let userState: RBSCloudObjectState
+    public let roleState: RBSCloudObjectState
+    public let publicState: RBSCloudObjectState
+    
+    let projectID: String
+    let classID: String
+    let instanceID: String
+    weak var db: Firestore?
+    
+    init(projectID: String, classID: String, instanceID: String, db: Firestore?) {
+        self.projectID = projectID
+        self.classID = classID
+        self.instanceID = instanceID
+        self.db = db
+
+        self.userState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, state: .user, db: db)
+        self.roleState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, state: .role, db: db)
+        self.publicState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, state: .public, db: db)
+    }
+}
+
+public class RBSCloudObjectState {
+    let projectID: String
+    let classID: String
+    let instanceID: String
+    let state: CloudObjectState
+    weak var db: Firestore?
+    
+    init(projectID: String, classID: String, instanceID: String, state: CloudObjectState, db: Firestore?) {
+        self.projectID = projectID
+        self.classID = classID
+        self.instanceID = instanceID
+        self.state = state
+        self.db = db
+    }
+
+    public func subscribe(
+        eventFired: @escaping ([String: Any]) -> Void,
+        errorFired: @escaping (Error) -> Void
+    ) {
+        var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
+        var documentPath = ""
+        switch state {
+        case .user:
+            documentPath = "userState"
+            path.append("userState")
+        case .role:
+            documentPath = "roleState"
+            path.append("roleState")
+        case .public:
+            documentPath = "publicState"
+            path.append("publicState")
+        }
+        
+        guard let database = db else {
+            errorFired(RBSError.cloudNotConfigured)
+            return
+        }
+        
+        database
+            .collection("projects")
+            .document("\(projectID)")
+            .collection("classes")
+            .document("\(classID)")
+            .collection("instances")
+            .document("\(instanceID)")
+            .collection(documentPath)
+            .document("userAli")
+            .addSnapshotListener { (snap, error) in
+                guard error == nil else {
+                    errorFired(error!)
+                    return
+                }
+                
+                guard let dataSnap = snap?.data() else {
+                    errorFired(RBSError.noCloudSnapFound)
+                    return
+                }
+                
+                eventFired(dataSnap)
+            }
+        
+//        database.document(path).addSnapshotListener { (snap, error) in
+//            guard error == nil else {
+//                errorFired(error!)
+//                return
+//            }
+//
+//            guard let dataSnap = snap?.data() else {
+//                errorFired(RBSError.noCloudSnapFound)
+//                return
+//            }
+//
+//            eventFired(dataSnap)
+//        }
+    }
+}
+
+enum CloudObjectState {
+    case user,
+         role,
+         `public`
 }

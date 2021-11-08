@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "048dbf4ab878487895129a0c778e7996", region: .euWest1Beta, cloud: RBSCloud(classID: "class1", instanceID: "instance1")))
+    let rbs = RBS(config: RBSConfig(projectId: "048dbf4ab878487895129a0c778e7996", region: .euWest1Beta))
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -68,8 +68,6 @@ class ViewController: UIViewController {
         rbs.signOut()
     }
     @IBAction func searchProducts(_ sender: Any) {
-        
-        
         rbs.send(action: "rbs.catalog.get.SEARCH",
                  data: ["searchTerm": "hardal"],
                  headers: ["deneme": "baran"],
@@ -98,17 +96,28 @@ class ViewController: UIViewController {
         //                         onError: { error in
         //                            print("GET_CATEGORIES Error Result: \(error)")
         //                         })
-        
-        
-        rbs.subscribeToCloud(with: .role) { (event) in
-            print(event)
-        } errorFired: { (error) in
-            print("Error from cloud: \(error)")
+                
+        rbs.getCloudObject(classID: "TEST", instanceID: "01FKVP097BGXJ7J5MEXJ1HXSN3") { [weak self] (newObject) in
+            self?.userObject = newObject
+            newObject.userState.subscribe { (data) in
+                print("---XXXX", data)
+            } errorFired: { (error) in
+                print("---XXX", error)
+            }
+
+        } onError: { (error) in
+            print(error)
         }
 
-        
-        
+//        userObject.roleState.subscribe { (data) in
+//            print("---XXXX", data)
+//        } errorFired: { (error) in
+//            print("---XXX", error)
+//        }
     }
+    
+    var userObject: RBSCloudObject?
+    
     @IBAction func loginBusinessUser(_ sender: Any) {
         rbs.send(action: "rbs.businessuserauth.request.LOGIN",
                  data: [
