@@ -47,6 +47,9 @@
     ],
     "FirebaseFirestoreSwift": [
 
+    ],
+    "Firebase/Auth": [
+
     ]
   }
 }

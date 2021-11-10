@@ -8,6 +8,7 @@ import Foundation
 import TrustKit
 import FirebaseCore
 import FirebaseFirestore
+import FirebaseAuth
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
@@ -64,6 +65,7 @@ struct RBSTokenData : Mappable, Decodable {
     var uid: String?
     var accessToken: String?
     var refreshToken: String?
+    var firebaseToken: String?
     
     var accessTokenExpiresAt: Date? {
         get {
@@ -215,6 +217,7 @@ public class RBS {
     
     var config: RBSConfig!
     
+    private var firebaseApp: FirebaseApp?
     private var db: Firestore?
     
     public init(config:RBSConfig) {
@@ -229,6 +232,8 @@ public class RBS {
         self.projectId = config.projectId
         globalRbsRegion = config.region!
         
+        GTMSessionFetcherService.swizzleDelegateDispatcherForFetcher()
+        
         let firebaseOptions = FirebaseOptions(
             googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
             gcmSenderID: "814752823492"
@@ -242,6 +247,7 @@ public class RBS {
             return
         }
         
+        firebaseApp = app
         db = Firestore.firestore(app: app)
     }
     
@@ -360,6 +366,18 @@ public class RBS {
                 if userId != storedUserId {
                     // User has changed.
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
+                    
+                    if let firebaseToken = tokenData.firebaseToken {
+                        guard let app = firebaseApp else {
+                            return
+                        }
+                        DispatchQueue.main.async {
+                            Auth.auth(app: app).signIn(withCustomToken: firebaseToken) { (resp, error) in
+                                print(resp, error)
+                                
+                            }
+                        }
+                    }
                     
                     if anonymous {
                         DispatchQueue.main.async {
@@ -522,6 +540,12 @@ public class RBS {
     
     public func signOut() {
         self.saveTokenData(tokenData: nil)
+        do {
+            guard let app = firebaseApp else {
+                return
+            }
+            try Auth.auth(app: app).signOut()
+        } catch { }
     }
     
     
@@ -589,6 +613,8 @@ public class RBS {
             cloudObjects.append(object)
             onSuccess(object)
         }
+        
+        // get with send action
 
 //        send(
 //            action: "",
@@ -752,4 +778,45 @@ enum CloudObjectState {
     case user,
          role,
          `public`
+}
+
+import GTMSessionFetcher
+
+// Code to swizzle `GTMSessionFetcherService.delegateDispatcherForFetcher:` in order to fix a crash
+private extension GTMSessionFetcherService {
+  private static var delegateDispatcherForFetcherIsSwizzled: Bool = false
+
+  static func swizzleDelegateDispatcherForFetcher() {
+    if delegateDispatcherForFetcherIsSwizzled {
+      return
+    }
+    delegateDispatcherForFetcherIsSwizzled = true
+
+    // `delegateDispatcherForFetcher:` is private and so we cannot use `#selector(..)`
+    let originalSelector = sel_registerName("delegateDispatcherForFetcher:")
+    let newSelector = #selector(new_delegateDispatcherForFetcher)
+    if let originalMethod = class_getInstanceMethod(self, originalSelector),
+      let newMethod = class_getInstanceMethod(self, newSelector) {
+      method_setImplementation(originalMethod, method_getImplementation(newMethod))
+    }
+  }
+
+  /*
+   Modified code from GTMSessionFetcherService.m:
+   https://github.com/google/gtm-session-fetcher/blob/c879a387e0ca4abcdff9e37eb0e826f7142342b1/Source/GTMSessionFetcherService.m#L382
+
+   Original code returns GTMSessionFetcherSessionDelegateDispatcher but it's a private class
+   so we are returning NSObject which is its superclass.
+   */
+  // Internal utility. Returns a fetcher's delegate if it's a dispatcher, or nil if the fetcher
+  // is its own delegate (possibly via proxy) and has no dispatcher.
+  @objc
+  private func new_delegateDispatcherForFetcher(_ fetcher: GTMSessionFetcher?) -> NSObject? {
+    if let fetcherDelegate = fetcher?.session?.delegate,
+      let delegateDispatcherClass = NSClassFromString("GTMSessionFetcherSessionDelegateDispatcher"),
+      fetcherDelegate.isKind(of: delegateDispatcherClass) {
+      return fetcherDelegate as? NSObject
+    }
+    return nil
+  }
 }

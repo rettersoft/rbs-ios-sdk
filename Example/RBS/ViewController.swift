@@ -108,12 +108,6 @@ class ViewController: UIViewController {
         } onError: { (error) in
             print(error)
         }
-
-//        userObject.roleState.subscribe { (data) in
-//            print("---XXXX", data)
-//        } errorFired: { (error) in
-//            print("---XXX", error)
-//        }
     }
     
     var userObject: RBSCloudObject?
