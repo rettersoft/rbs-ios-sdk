@@ -9,6 +9,7 @@ import TrustKit
 import FirebaseCore
 import FirebaseFirestore
 import FirebaseAuth
+import GTMSessionFetcher
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
@@ -374,7 +375,6 @@ public class RBS {
                         DispatchQueue.main.async {
                             Auth.auth(app: app).signIn(withCustomToken: firebaseToken) { (resp, error) in
                                 print(resp, error)
-                                
                             }
                         }
                     }
@@ -606,26 +606,60 @@ public class RBS {
         onSuccess: @escaping (RBSCloudObject) -> Void,
         onError: @escaping (Error) -> Void
     ) {
-        if let object = cloudObjects.filter({ $0.classID == classID && $0.instanceID == instanceID }).first {
-            onSuccess(object)
-        } else {
-            let object = RBSCloudObject(projectID: projectId, classID: classID, instanceID: instanceID ?? "", db: db)
-            cloudObjects.append(object)
-            onSuccess(object)
-        }
-        
-        // get with send action
-
-//        send(
-//            action: "",
-//            data: [:],
-//            headers: [:]
-//        ) { (response) in
-//
-//            onSuccess(RBSCloudObject(classID: classID, instanceID: instanceID ?? ""))
-//        } onError: { (error) in
-//            onError(error)
+//        if let object = cloudObjects.filter({ $0.classID == classID && $0.instanceID == instanceID }).first {
+//            onSuccess(object)
+//        } else {
+//            let object = RBSCloudObject(projectID: projectId, classID: classID, instanceID: instanceID ?? "", db: db)
+//            cloudObjects.append(object)
+//            onSuccess(object)
 //        }
+//
+        
+        var parameters: [String: Any] = ["classId": classID]
+        if let instanceID = instanceID {
+            parameters["instanceId"] = instanceID
+        }
+
+        send(
+            action: "rbs.core.request.INSTANCE",
+            data: parameters,
+            headers: [:]
+        ) { [weak self] (response) in
+            guard let self = self else {
+                return
+            }
+//            print(response)
+            if let firstResp = response.first as? [String: Any],
+               let resp = firstResp["response"] as? [String: Any],
+               let respInstanceId = resp["instanceId"] as? String {
+                
+                var userIdentity: String?
+                var userId: String?
+                if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
+                    let json = try! JSONSerialization.jsonObject(with: data, options: [])
+                    if let storedTokenData = Mapper<RBSTokenData>().map(JSONObject: json), let accessToken = storedTokenData.accessToken {
+                        let jwt = try! decode(jwt: accessToken)
+                        if let id = jwt.claim(name: "userId").string {
+                            userId = id
+                        }
+                        if let identity = jwt.claim(name: "identity").string {
+                            userIdentity = identity
+                        }
+                    }
+                }
+                
+//                print(respInstanceId, userId, userIdentity)
+                if let object = self.cloudObjects.filter({ $0.classID == classID && $0.instanceID == respInstanceId }).first {
+                    onSuccess(object)
+                } else {
+                    let object = RBSCloudObject(projectID: self.projectId, classID: classID, instanceID: respInstanceId, userID: userId ?? "", userIdentity: userIdentity ?? "", db: self.db)
+                    self.cloudObjects.append(object)
+                    onSuccess(object)
+                }
+            }
+        } onError: { (error) in
+            onError(error)
+        }
 
     }
     
@@ -683,17 +717,21 @@ public class RBSCloudObject {
     let projectID: String
     let classID: String
     let instanceID: String
+    let userID: String
+    let userIdentity: String
     weak var db: Firestore?
     
-    init(projectID: String, classID: String, instanceID: String, db: Firestore?) {
+    init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, db: Firestore?) {
         self.projectID = projectID
         self.classID = classID
         self.instanceID = instanceID
+        self.userID = userID
+        self.userIdentity = userIdentity
         self.db = db
 
-        self.userState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, state: .user, db: db)
-        self.roleState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, state: .role, db: db)
-        self.publicState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, state: .public, db: db)
+        self.userState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .user, db: db)
+        self.roleState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .role, db: db)
+        self.publicState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .public, db: db)
     }
 }
 
@@ -701,14 +739,18 @@ public class RBSCloudObjectState {
     let projectID: String
     let classID: String
     let instanceID: String
+    let userID: String
+    let userIdentity: String
     let state: CloudObjectState
     weak var db: Firestore?
     
-    init(projectID: String, classID: String, instanceID: String, state: CloudObjectState, db: Firestore?) {
+    init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, state: CloudObjectState, db: Firestore?) {
         self.projectID = projectID
         self.classID = classID
         self.instanceID = instanceID
         self.state = state
+        self.userID = userID
+        self.userIdentity = userIdentity
         self.db = db
     }
 
@@ -717,39 +759,54 @@ public class RBSCloudObjectState {
         errorFired: @escaping (Error) -> Void
     ) {
         var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
-        var documentPath = ""
-        switch state {
-        case .user:
-            documentPath = "userState"
-            path.append("userState")
-        case .role:
-            documentPath = "roleState"
-            path.append("roleState")
-        case .public:
-            documentPath = "publicState"
-            path.append("publicState")
-        }
         
         guard let database = db else {
             errorFired(RBSError.cloudNotConfigured)
             return
         }
         
-        database
-            .collection("projects")
-            .document("\(projectID)")
-            .collection("classes")
-            .document("\(classID)")
-            .collection("instances")
-            .document("\(instanceID)")
-            .collection(documentPath)
-            .document("userAli")
-            .addSnapshotListener { (snap, error) in
+        switch state {
+        case .user:
+            path.append("userState")
+            database.collection(path)
+                .whereField("userID", isEqualTo: 1) // isEqualTo userID
+                .addSnapshotListener { (snap, error) in
+                    guard error == nil else {
+                        errorFired(error!)
+                        return
+                    }
+                                    
+                    guard let dataSnap = snap?.documents.first?.data() else {
+                        errorFired(RBSError.noCloudSnapFound)
+                        return
+                    }
+                    
+                    eventFired(dataSnap)
+                }
+        case .role:
+            path.append("roleState")
+            database.collection(path)
+                .whereField("endUser", isEqualTo: "anonymous") // isEqualTo userIdentity
+                .addSnapshotListener { (snap, error) in
+                    guard error == nil else {
+                        errorFired(error!)
+                        return
+                    }
+                                    
+                    guard let dataSnap = snap?.documents.first?.data() else {
+                        errorFired(RBSError.noCloudSnapFound)
+                        return
+                    }
+                    
+                    eventFired(dataSnap)
+                }
+        case .public:
+            database.document(path).addSnapshotListener { (snap, error) in
                 guard error == nil else {
                     errorFired(error!)
                     return
                 }
-                
+                                
                 guard let dataSnap = snap?.data() else {
                     errorFired(RBSError.noCloudSnapFound)
                     return
@@ -757,20 +814,7 @@ public class RBSCloudObjectState {
                 
                 eventFired(dataSnap)
             }
-        
-//        database.document(path).addSnapshotListener { (snap, error) in
-//            guard error == nil else {
-//                errorFired(error!)
-//                return
-//            }
-//
-//            guard let dataSnap = snap?.data() else {
-//                errorFired(RBSError.noCloudSnapFound)
-//                return
-//            }
-//
-//            eventFired(dataSnap)
-//        }
+        }
     }
 }
 
@@ -778,45 +822,4 @@ enum CloudObjectState {
     case user,
          role,
          `public`
-}
-
-import GTMSessionFetcher
-
-// Code to swizzle `GTMSessionFetcherService.delegateDispatcherForFetcher:` in order to fix a crash
-private extension GTMSessionFetcherService {
-  private static var delegateDispatcherForFetcherIsSwizzled: Bool = false
-
-  static func swizzleDelegateDispatcherForFetcher() {
-    if delegateDispatcherForFetcherIsSwizzled {
-      return
-    }
-    delegateDispatcherForFetcherIsSwizzled = true
-
-    // `delegateDispatcherForFetcher:` is private and so we cannot use `#selector(..)`
-    let originalSelector = sel_registerName("delegateDispatcherForFetcher:")
-    let newSelector = #selector(new_delegateDispatcherForFetcher)
-    if let originalMethod = class_getInstanceMethod(self, originalSelector),
-      let newMethod = class_getInstanceMethod(self, newSelector) {
-      method_setImplementation(originalMethod, method_getImplementation(newMethod))
-    }
-  }
-
-  /*
-   Modified code from GTMSessionFetcherService.m:
-   https://github.com/google/gtm-session-fetcher/blob/c879a387e0ca4abcdff9e37eb0e826f7142342b1/Source/GTMSessionFetcherService.m#L382
-
-   Original code returns GTMSessionFetcherSessionDelegateDispatcher but it's a private class
-   so we are returning NSObject which is its superclass.
-   */
-  // Internal utility. Returns a fetcher's delegate if it's a dispatcher, or nil if the fetcher
-  // is its own delegate (possibly via proxy) and has no dispatcher.
-  @objc
-  private func new_delegateDispatcherForFetcher(_ fetcher: GTMSessionFetcher?) -> NSObject? {
-    if let fetcherDelegate = fetcher?.session?.delegate,
-      let delegateDispatcherClass = NSClassFromString("GTMSessionFetcherSessionDelegateDispatcher"),
-      fetcherDelegate.isKind(of: delegateDispatcherClass) {
-      return fetcherDelegate as? NSObject
-    }
-    return nil
-  }
 }

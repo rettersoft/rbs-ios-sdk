@@ -68,41 +68,48 @@ class ViewController: UIViewController {
         rbs.signOut()
     }
     @IBAction func searchProducts(_ sender: Any) {
-        rbs.send(action: "rbs.catalog.get.SEARCH",
-                 data: ["searchTerm": "hardal"],
-                 headers: ["deneme": "baran"],
-                 onSuccess: { result in
-                    print("SEARCH Result: \(result)")
-                 },
-                 onError: { error in
-                    print("SEARCH Error Result: \(error)")
-                 })
-        //
-        //        rbs.send(action: "rbs.catalog.get.SEARCH",
-        //                 data: ["searchTerm": "hardal"],
-        //                 onSuccess: { result in
-        //                    print("SEARCH Result success")
-        //                 },
-        //                 onError: { error in
-        //                    print("SEARCH Error Result: \(error)")
-        //                 })
-        //
-        //
-        //                rbs.send(action: "rbs.catalog.request.GET_CATEGORIES",
-        //                         data: ["searchTerm": "hardal"],
-        //                         onSuccess: { result in
-        //                            print("GET_CATEGORIES Result success")
-        //                         },
-        //                         onError: { error in
-        //                            print("GET_CATEGORIES Error Result: \(error)")
-        //                         })
-                
-        rbs.getCloudObject(classID: "TEST", instanceID: "01FKVP097BGXJ7J5MEXJ1HXSN3") { [weak self] (newObject) in
-            self?.userObject = newObject
+//        rbs.send(action: "rbs.catalog.get.SEARCH",
+//                 data: ["searchTerm": "hardal"],
+//                 headers: ["deneme": "baran"],
+//                 onSuccess: { result in
+//                    print("SEARCH Result: \(result)")
+//                 },
+//                 onError: { error in
+//                    print("SEARCH Error Result: \(error)")
+//                 })
+              
+        let classID = "TEST"
+        let instanceId: String? = "01FM7P6NFVNJZHQEC54V1CXY3S"
+        rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
+//            self?.userObject = newObject
             newObject.userState.subscribe { (data) in
-                print("---XXXX", data)
+                print("---User State ->", data)
             } errorFired: { (error) in
-                print("---XXX", error)
+                print("---User State Error ->", error)
+            }
+
+        } onError: { (error) in
+            print(error)
+        }
+        
+        rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
+//            self?.userObject = newObject
+            newObject.roleState.subscribe { (data) in
+                print("---RoleState State ->", data)
+            } errorFired: { (error) in
+                print("---Role State Error ->", error)
+            }
+
+        } onError: { (error) in
+            print(error)
+        }
+        
+        rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
+//            self?.userObject = newObject
+            newObject.publicState.subscribe { (data) in
+                print("---Public State ->", data)
+            } errorFired: { (error) in
+                print("---Public State Error ->", error)
             }
 
         } onError: { (error) in
