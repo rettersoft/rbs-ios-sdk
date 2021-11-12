@@ -68,57 +68,44 @@ class ViewController: UIViewController {
         rbs.signOut()
     }
     @IBAction func searchProducts(_ sender: Any) {
-//        rbs.send(action: "rbs.catalog.get.SEARCH",
-//                 data: ["searchTerm": "hardal"],
-//                 headers: ["deneme": "baran"],
-//                 onSuccess: { result in
-//                    print("SEARCH Result: \(result)")
-//                 },
-//                 onError: { error in
-//                    print("SEARCH Error Result: \(error)")
-//                 })
-              
         let classID = "TEST"
-        let instanceId: String? = "01FM7P6NFVNJZHQEC54V1CXY3S"
+        let instanceId: String? = "01FMACMRA04GCG46TMYE0EYCX8"
         rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
-//            self?.userObject = newObject
+            // Subscribe to Methods
             newObject.userState.subscribe { (data) in
                 print("---User State ->", data)
             } errorFired: { (error) in
                 print("---User State Error ->", error)
             }
-
-        } onError: { (error) in
-            print(error)
-        }
-        
-        rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
-//            self?.userObject = newObject
+            
             newObject.roleState.subscribe { (data) in
                 print("---RoleState State ->", data)
             } errorFired: { (error) in
                 print("---Role State Error ->", error)
             }
-
-        } onError: { (error) in
-            print(error)
-        }
-        
-        rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
-//            self?.userObject = newObject
+            
             newObject.publicState.subscribe { (data) in
                 print("---Public State ->", data)
             } errorFired: { (error) in
                 print("---Public State Error ->", error)
             }
+            
+            // Method Call
+            newObject.call(
+                method: "method",
+                payload: [:]
+            ) { (response) in
+                print("---Method Response ->", response)
+            } errorFired: { (error) in
+                print("---Method Error ->", error)
+            }
+
 
         } onError: { (error) in
             print(error)
         }
     }
-    
-    var userObject: RBSCloudObject?
-    
+        
     @IBAction func loginBusinessUser(_ sender: Any) {
         rbs.send(action: "rbs.businessuserauth.request.LOGIN",
                  data: [

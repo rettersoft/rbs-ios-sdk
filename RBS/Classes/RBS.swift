@@ -67,6 +67,7 @@ struct RBSTokenData : Mappable, Decodable {
     var accessToken: String?
     var refreshToken: String?
     var firebaseToken: String?
+    var firebase: CloudOption?
     
     var accessTokenExpiresAt: Date? {
         get {
@@ -98,6 +99,12 @@ struct RBSTokenData : Mappable, Decodable {
         accessToken <- map["accessToken"]
         refreshToken <- map["refreshToken"]
     }
+}
+
+struct CloudOption: Decodable {
+    let customToken: String?
+    let projectId: String?
+    let apiKey: String?
 }
 
 public enum RBSClientAuthStatus {
@@ -219,7 +226,7 @@ public class RBS {
     var config: RBSConfig!
     
     private var firebaseApp: FirebaseApp?
-    private var db: Firestore?
+    fileprivate var db: Firestore?
     
     public init(config:RBSConfig) {
         if let sslPinningEnabled = config.sslPinningEnabled, sslPinningEnabled == false {
@@ -239,6 +246,7 @@ public class RBS {
             googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
             gcmSenderID: "814752823492"
         )
+//        let firebaseOptions = FirebaseOptions()
         firebaseOptions.projectID = "rtbs-c82e1"
         firebaseOptions.apiKey = "AIzaSyCAbRGoJSyRHoO5Od-QRktSbRpSny0ebbM"
         
@@ -367,14 +375,19 @@ public class RBS {
                 if userId != storedUserId {
                     // User has changed.
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
+                    cloudObjects.removeAll()
                     
-                    if let firebaseToken = tokenData.firebaseToken {
+                    if let fOption = tokenData.firebase {
+                        print("---", fOption.apiKey, fOption.customToken, fOption.projectId)
+                    }
+                    
+                    if let firebaseToken = tokenData.firebase?.customToken {
                         guard let app = firebaseApp else {
                             return
                         }
                         DispatchQueue.main.async {
                             Auth.auth(app: app).signIn(withCustomToken: firebaseToken) { (resp, error) in
-                                print(resp, error)
+                                print("-----", resp?.credential, resp?.additionalUserInfo, error)
                             }
                         }
                     }
@@ -541,6 +554,7 @@ public class RBS {
     public func signOut() {
         self.saveTokenData(tokenData: nil)
         do {
+            cloudObjects.removeAll()
             guard let app = firebaseApp else {
                 return
             }
@@ -606,14 +620,11 @@ public class RBS {
         onSuccess: @escaping (RBSCloudObject) -> Void,
         onError: @escaping (Error) -> Void
     ) {
-//        if let object = cloudObjects.filter({ $0.classID == classID && $0.instanceID == instanceID }).first {
-//            onSuccess(object)
-//        } else {
-//            let object = RBSCloudObject(projectID: projectId, classID: classID, instanceID: instanceID ?? "", db: db)
-//            cloudObjects.append(object)
-//            onSuccess(object)
-//        }
-//
+        if let instance = instanceID,
+              let object = cloudObjects.filter({ $0.classID == classID && $0.instanceID == instance }).first {
+            onSuccess(object)
+            return
+        }
         
         var parameters: [String: Any] = ["classId": classID]
         if let instanceID = instanceID {
@@ -652,7 +663,14 @@ public class RBS {
                 if let object = self.cloudObjects.filter({ $0.classID == classID && $0.instanceID == respInstanceId }).first {
                     onSuccess(object)
                 } else {
-                    let object = RBSCloudObject(projectID: self.projectId, classID: classID, instanceID: respInstanceId, userID: userId ?? "", userIdentity: userIdentity ?? "", db: self.db)
+                    let object = RBSCloudObject(
+                        projectID: self.projectId,
+                        classID: classID,
+                        instanceID: respInstanceId,
+                        userID: userId ?? "",
+                        userIdentity: userIdentity ?? "",
+                        rbs: self
+                    )
                     self.cloudObjects.append(object)
                     onSuccess(object)
                 }
@@ -714,24 +732,51 @@ public class RBSCloudObject {
     public let roleState: RBSCloudObjectState
     public let publicState: RBSCloudObjectState
     
-    let projectID: String
-    let classID: String
-    let instanceID: String
-    let userID: String
-    let userIdentity: String
-    weak var db: Firestore?
+    private let projectID: String
+    fileprivate let classID: String
+    fileprivate let instanceID: String
+    private let userID: String
+    private let userIdentity: String
+    private weak var db: Firestore?
+    private weak var rbs: RBS?
     
-    init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, db: Firestore?) {
+    init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, rbs: RBS?) {
         self.projectID = projectID
         self.classID = classID
         self.instanceID = instanceID
         self.userID = userID
         self.userIdentity = userIdentity
-        self.db = db
+        self.rbs = rbs
+        self.db = rbs?.db
 
         self.userState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .user, db: db)
         self.roleState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .role, db: db)
         self.publicState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .public, db: db)
+    }
+    
+    public func call(
+        method: String,
+        payload: [String: Any],
+        eventFired: @escaping ([Any]) -> Void,
+        errorFired: @escaping (Error) -> Void
+    ) {
+        var data = payload
+        data["classId"] = classID
+        data["instanceId"] = instanceID
+        
+        guard let rbs = rbs else {
+            return
+        }
+        
+        rbs.send(
+            action: "rbs.core.request.CALL",
+            data: data,
+            headers: [:]) { (response) in
+            eventFired(response)
+        } onError: { (error) in
+            errorFired(error)
+        }
+
     }
 }
 
@@ -753,12 +798,14 @@ public class RBSCloudObjectState {
         self.userIdentity = userIdentity
         self.db = db
     }
-
+    
     public func subscribe(
         eventFired: @escaping ([String: Any]) -> Void,
         errorFired: @escaping (Error) -> Void
     ) {
         var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
+        
+        print("---XXX", userID, userIdentity, path)
         
         guard let database = db else {
             errorFired(RBSError.cloudNotConfigured)
@@ -767,16 +814,15 @@ public class RBSCloudObjectState {
         
         switch state {
         case .user:
-            path.append("userState")
-            database.collection(path)
-                .whereField("userID", isEqualTo: 1) // isEqualTo userID
+            path.append("userState/\(userID)")
+            database.document(path)
                 .addSnapshotListener { (snap, error) in
                     guard error == nil else {
                         errorFired(error!)
                         return
                     }
                                     
-                    guard let dataSnap = snap?.documents.first?.data() else {
+                    guard let dataSnap = snap?.data() else {
                         errorFired(RBSError.noCloudSnapFound)
                         return
                     }
@@ -784,16 +830,15 @@ public class RBSCloudObjectState {
                     eventFired(dataSnap)
                 }
         case .role:
-            path.append("roleState")
-            database.collection(path)
-                .whereField("endUser", isEqualTo: "anonymous") // isEqualTo userIdentity
+            path.append("roleState/\(userIdentity)")
+            database.document(path)
                 .addSnapshotListener { (snap, error) in
                     guard error == nil else {
                         errorFired(error!)
                         return
                     }
                                     
-                    guard let dataSnap = snap?.documents.first?.data() else {
+                    guard let dataSnap = snap?.data() else {
                         errorFired(RBSError.noCloudSnapFound)
                         return
                     }
