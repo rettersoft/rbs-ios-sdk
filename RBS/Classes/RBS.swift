@@ -375,6 +375,13 @@ public class RBS {
                 if userId != storedUserId {
                     // User has changed.
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
+                    
+                    cloudObjects.forEach { object in
+                        object.state.publicState.listener?.remove()
+                        object.state.roleState.listener?.remove()
+                        object.state.userState.listener?.remove()
+                    }
+                    
                     cloudObjects.removeAll()
                     
                     if let fOption = tokenData.firebase {
@@ -554,12 +561,27 @@ public class RBS {
     public func signOut() {
         self.saveTokenData(tokenData: nil)
         do {
+            cloudObjects.forEach { object in
+                object.state.publicState.listener?.remove()
+                object.state.roleState.listener?.remove()
+                object.state.userState.listener?.remove()
+            }
             cloudObjects.removeAll()
+
             guard let app = firebaseApp else {
                 return
             }
             try Auth.auth(app: app).signOut()
         } catch { }
+    }
+    
+    public func removeAllCloudObjects() { // ONLY FOR TEST PURPOSES
+        cloudObjects.forEach { object in
+            object.state.publicState.listener?.remove()
+            object.state.roleState.listener?.remove()
+            object.state.userState.listener?.remove()
+        }
+        cloudObjects.removeAll()
     }
     
     
@@ -728,9 +750,11 @@ public class RBS {
 }
 
 public class RBSCloudObject {
-    public let userState: RBSCloudObjectState
-    public let roleState: RBSCloudObjectState
-    public let publicState: RBSCloudObjectState
+    public struct State {
+        public let userState: RBSCloudObjectState
+        public let roleState: RBSCloudObjectState
+        public let publicState: RBSCloudObjectState
+    }
     
     private let projectID: String
     fileprivate let classID: String
@@ -739,6 +763,7 @@ public class RBSCloudObject {
     private let userIdentity: String
     private weak var db: Firestore?
     private weak var rbs: RBS?
+    public let state: State
     
     init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, rbs: RBS?) {
         self.projectID = projectID
@@ -748,10 +773,12 @@ public class RBSCloudObject {
         self.userIdentity = userIdentity
         self.rbs = rbs
         self.db = rbs?.db
-
-        self.userState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .user, db: db)
-        self.roleState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .role, db: db)
-        self.publicState = RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .public, db: db)
+        
+        state = State(
+            userState: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .user, db: db),
+            roleState: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .role, db: db),
+            publicState: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .public, db: db)
+        )
     }
     
     public func call(
@@ -760,9 +787,12 @@ public class RBSCloudObject {
         eventFired: @escaping ([Any]) -> Void,
         errorFired: @escaping (Error) -> Void
     ) {
-        var data = payload
+
+        var data: [String: Any] = [:]
         data["classId"] = classID
         data["instanceId"] = instanceID
+        data["method"] = method
+        data["payload"] = payload
         
         guard let rbs = rbs else {
             return
@@ -788,6 +818,7 @@ public class RBSCloudObjectState {
     let userIdentity: String
     let state: CloudObjectState
     weak var db: Firestore?
+    var listener: ListenerRegistration?
     
     init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, state: CloudObjectState, db: Firestore?) {
         self.projectID = projectID
@@ -797,6 +828,7 @@ public class RBSCloudObjectState {
         self.userID = userID
         self.userIdentity = userIdentity
         self.db = db
+        
     }
     
     public func subscribe(
@@ -804,9 +836,7 @@ public class RBSCloudObjectState {
         errorFired: @escaping (Error) -> Void
     ) {
         var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
-        
-        print("---XXX", userID, userIdentity, path)
-        
+                
         guard let database = db else {
             errorFired(RBSError.cloudNotConfigured)
             return
@@ -815,7 +845,7 @@ public class RBSCloudObjectState {
         switch state {
         case .user:
             path.append("userState/\(userID)")
-            database.document(path)
+            listener = database.document(path)
                 .addSnapshotListener { (snap, error) in
                     guard error == nil else {
                         errorFired(error!)
@@ -831,7 +861,7 @@ public class RBSCloudObjectState {
                 }
         case .role:
             path.append("roleState/\(userIdentity)")
-            database.document(path)
+            listener = database.document(path)
                 .addSnapshotListener { (snap, error) in
                     guard error == nil else {
                         errorFired(error!)
@@ -846,7 +876,7 @@ public class RBSCloudObjectState {
                     eventFired(dataSnap)
                 }
         case .public:
-            database.document(path).addSnapshotListener { (snap, error) in
+            listener = database.document(path).addSnapshotListener { (snap, error) in
                 guard error == nil else {
                     errorFired(error!)
                     return

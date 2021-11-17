@@ -68,23 +68,23 @@ class ViewController: UIViewController {
         rbs.signOut()
     }
     @IBAction func searchProducts(_ sender: Any) {
-        let classID = "TEST"
-        let instanceId: String? = "01FMACMRA04GCG46TMYE0EYCX8"
+        let classID = "TODO"
+        let instanceId: String? = "01FMQ62R14RXJYYA5NK1GTBE3T"
         rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
-            // Subscribe to Methods
-            newObject.userState.subscribe { (data) in
+            // Subscribe to Objects
+            newObject.state.userState.subscribe { (data) in
                 print("---User State ->", data)
             } errorFired: { (error) in
                 print("---User State Error ->", error)
             }
             
-            newObject.roleState.subscribe { (data) in
+            newObject.state.roleState.subscribe { (data) in
                 print("---RoleState State ->", data)
             } errorFired: { (error) in
                 print("---Role State Error ->", error)
             }
             
-            newObject.publicState.subscribe { (data) in
+            newObject.state.publicState.subscribe { (data) in
                 print("---Public State ->", data)
             } errorFired: { (error) in
                 print("---Public State Error ->", error)
@@ -92,8 +92,8 @@ class ViewController: UIViewController {
             
             // Method Call
             newObject.call(
-                method: "method",
-                payload: [:]
+                method: "CREATE_TODO",
+                payload: ["todoName":"XXX"]
             ) { (response) in
                 print("---Method Response ->", response)
             } errorFired: { (error) in
@@ -107,6 +107,7 @@ class ViewController: UIViewController {
     }
         
     @IBAction func loginBusinessUser(_ sender: Any) {
+        rbs.removeAllCloudObjects()
         rbs.send(action: "rbs.businessuserauth.request.LOGIN",
                  data: [
                     "email": "email@test.com",
