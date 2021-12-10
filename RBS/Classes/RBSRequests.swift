@@ -7,6 +7,7 @@
 
 import Foundation
 import ObjectMapper
+import Moya
 
 class GetAnonymTokenRequest : Mappable {
     
@@ -61,7 +62,12 @@ class ExecuteActionRequest : Mappable {
     var payload: [String:Any]?
     var headers: [String:String]?
     var culture: String?
-    
+    var classID: String?
+    var instanceID: String?
+    var keyValue: (key: String, value: String)?
+    var httpMethod: Moya.Method?
+    var method: String?
+    var queryString: [String: Any]?
     
     required init?(map: Map) { }
     

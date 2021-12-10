@@ -11,7 +11,10 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "048dbf4ab878487895129a0c778e7996", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "69ec1ef0039b4332b3e102f082a98ec2", region: .euWest1Beta))
+    
+    var cloudObject: RBSCloudObject?
+    var cloudItem = RBSCloudObjectItem(classID: "ChatRoom", instanceID: "01FPJ1GSS8AF47CYX1FD5FB62X")
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,138 +35,79 @@ class ViewController: UIViewController {
         ])
         
         print("URL is \(url)")
-        
-        //        rbs.generateGetActionUrl(action: "rbs.businessuserauth.get.LOGIN",
-        //                                 data: [
-        //                                    "email": "email@test.com",
-        //                                    "password": "password"
-        //                                 ]) { url in
-        //            print("URL \(url)")
-        //        } onError: { err in
-        //
-        //        }
-        
-        
-        //        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
-        //                 data: [
-        //                    "email": "email@test.com",
-        //                    "password": "password"
-        //                 ],
-        //                 onSuccess: { result in
-        //                    print("Result: \(result)")
-        //
-        //                    if let serviceResponse = result.first as? [String:Any],
-        //                       let resp = serviceResponse["response"] as? [String:Any],
-        //
-        //                       let customToken = resp["customToken"] as? String {
-        //                        self.rbs.authenticateWithCustomToken(customToken)
-        //                    }
-        //                 },
-        //                 onError: { error in
-        //                    print("Error Result: \(error)")
-        //                 })
-        
     }
     @IBAction func signoutTapped(_ sender: Any) {
         rbs.signOut()
     }
+
     @IBAction func searchProducts(_ sender: Any) {
-        let classID = "TODO"
-        let instanceId: String? = "01FMQ62R14RXJYYA5NK1GTBE3T"
-        rbs.getCloudObject(classID: classID, instanceID: instanceId) { (newObject) in
-            // Subscribe to Objects
-            newObject.state.userState.subscribe { (data) in
-                print("---User State ->", data)
-            } errorFired: { (error) in
-                print("---User State Error ->", error)
-            }
-            
-            newObject.state.roleState.subscribe { (data) in
-                print("---RoleState State ->", data)
-            } errorFired: { (error) in
-                print("---Role State Error ->", error)
-            }
-            
-            newObject.state.publicState.subscribe { (data) in
-                print("---Public State ->", data)
-            } errorFired: { (error) in
-                print("---Public State Error ->", error)
-            }
-            
-            // Method Call
-            newObject.call(
-                method: "CREATE_TODO",
-                payload: ["todoName":"XXX"]
-            ) { (response) in
-                print("---Method Response ->", response)
-            } errorFired: { (error) in
-                print("---Method Error ->", error)
-            }
-
-
+        // MARK: - Get Cloud Object
+        
+        rbs.getCloudObject(with: cloudItem) { [weak self] (newObject) in
+            print("--- Cloud Object Created ---")
+            self?.cloudObject = newObject
         } onError: { (error) in
             print(error)
         }
     }
         
     @IBAction func loginBusinessUser(_ sender: Any) {
-        rbs.removeAllCloudObjects()
-        rbs.send(action: "rbs.businessuserauth.request.LOGIN",
-                 data: [
-                    "email": "email@test.com",
-                    "password": "password"
-                 ],
-                 headers: ["deneme": "baran"],
-                 onSuccess: { result in
-                    print("Result: \(result)")
-                    
-                    if let serviceResponse = result.first as? [String:Any],
-                       let resp = serviceResponse["response"] as? [String:Any],
-                       let customToken = resp["customToken"] as? String {
-                        self.rbs.authenticateWithCustomToken(customToken)
-                    }
-                 },
-                 onError: { error in
-                    print("Error Result: \(error)")
-                 })
+        
+        // MARK: - Get Objects States
+        
+        if let object = cloudObject {
+            object.state.user.subscribe { (data) in
+                print("---User State ->", data)
+            } errorFired: { (error) in
+                print("---User State Error ->", error)
+            }
+
+            object.state.role.subscribe { (data) in
+                print("---RoleState State ->", data)
+            } errorFired: { (error) in
+                print("---Role State Error ->", error)
+            }
+
+            object.state.public.subscribe { (data) in
+                print("---Public State ->", data)
+            } errorFired: { (error) in
+                print("---Public State Error ->", error)
+            }
+        }
+        
     }
     @IBAction func testAction(_ sender: Any) {
-        
-        
-        
-        
-        rbs.send(action: "rbs.wms.request.GET_OPTION",
-                 data: ["optionId":"MAIN"],
-                 headers: nil,
-                 onSuccess: { result in
-                    print("Result: \(result)")
-                 },
-                 onError: { error in
-                    print("Error Result: \(error)")
-                 })
-        
-        
-        
-        
-        
-        //        rbs.send(action: "rbs.crm.request.GET_MY_PROFILE",
-        //                 data: [:],
-        //                 onSuccess: { result in
-        //                    print("Result: \(result)")
-        //                 },
-        //                 onError: { error in
-        //                    print("Error Result: \(error)")
-        //                 })
-        
-        //        rbs.send(action: "rbs.crm.request.UPDATE_PROFILE",
-        //                 data: ["firstName":"Baran", "lastName": "Baygan"],
-        //                 onSuccess: { result in
-        //                    print("Result: \(result)")
-        //                 },
-        //                 onError: { error in
-        //                    print("Error Result: \(error)")
-        //                 })
-        
+        cloudItem.method = "sendMessage"
+        if let object = cloudObject {
+            
+            // MARK: - Call Method
+            
+            object.call(
+                with: cloudItem
+            ) { (response) in
+                if let firstResponse = response.first,
+                   let data = firstResponse as? Data {
+                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
+                    print("---Method Response ->", json)
+                }
+            } errorFired: { (error) in
+                print("---Method Error ->", error)
+            }
+            
+            // MARK: - Get State via REST
+            
+            object.getState(
+                with: cloudItem
+            ) { (response) in
+                if let firstResponse = response.first,
+                   let data = firstResponse as? Data {
+                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
+                    print("---GETSTATE Response ->", json)
+                }
+            } errorFired: { (error) in
+                print("---GETSTATE Error ->", error)
+            }
+        }
     }
 }
 

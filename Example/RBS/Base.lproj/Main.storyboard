@@ -35,22 +35,22 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="tRQ-6h-ocY">
-                                <rect key="frame" x="118" y="432" width="139" height="30"/>
-                                <state key="normal" title="Business User Login"/>
+                                <rect key="frame" x="99.5" y="432" width="176" height="30"/>
+                                <state key="normal" title="Subsribe to Object States"/>
                                 <connections>
                                     <action selector="loginBusinessUser:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="COJ-Db-cLM"/>
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="IUt-gk-mJm">
-                                <rect key="frame" x="130.5" y="394" width="114" height="30"/>
-                                <state key="normal" title="Search Products"/>
+                                <rect key="frame" x="124.5" y="394" width="126" height="30"/>
+                                <state key="normal" title="Get Cloud Objects"/>
                                 <connections>
                                     <action selector="searchProducts:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="hbY-F5-Uki"/>
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="GBR-R1-uaz">
-                                <rect key="frame" x="149" y="470" width="77" height="30"/>
-                                <state key="normal" title="Test Action"/>
+                                <rect key="frame" x="140" y="470" width="95" height="30"/>
+                                <state key="normal" title="Call a Method"/>
                                 <connections>
                                     <action selector="testAction:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="dm2-fS-1Bs"/>
                                 </connections>
@@ -96,7 +96,7 @@
     </scenes>
     <resources>
         <systemColor name="systemBackgroundColor">
-            <color red="0.0" green="0.46000000000000002" blue="0.89000000000000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>
     </resources>
 </document>

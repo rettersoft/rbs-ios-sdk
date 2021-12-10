@@ -25,8 +25,29 @@ enum RBSService {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
         case .executeAction(let request):
-            return "/user/action/\(request.projectId!)/\(request.actionName!)"
+
+            let isExcludedAction = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "")
             
+            if !isExcludedAction {
+                return "/user/action/\(request.projectId!)/\(request.actionName!)"
+            } else {
+                if request.actionName == "rbs.core.request.CALL" {
+                    return "CALL/\(request.classID ?? "")/\(request.method ?? "")/\(request.instanceID ?? "")"
+                }
+                
+                if request.actionName == "rbs.core.request.STATE" {
+                    return "STATE/\(request.classID ?? "")/\(request.instanceID ?? "")"
+                }
+                
+                if let instanceID = request.instanceID {
+                    return "/INSTANCE/\(request.classID ?? "")/\(instanceID)"
+                } else if let keyValue = request.keyValue {
+                    return "/INSTANCE/\(request.classID ?? "")/\(keyValue.key)!\(keyValue.value)"
+                } else {
+                    return "/INSTANCE/\(request.classID ?? "")"
+                }
+                
+            }
         case .refreshToken(_): return "/public/auth-refresh"
         case .authWithCustomToken(_): return "/public/auth"
         }
@@ -60,6 +81,21 @@ enum RBSService {
         case .authWithCustomToken(let request): return ["customToken": request.customToken!, "platform": "IOS"]
             
         case .executeAction(let request):
+            
+            if ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "") {
+
+                var parameters: [String: Any] =  [
+                    "_token": request.accessToken != nil ? request.accessToken! : "",
+                ]
+                
+                if let queryParameters = request.queryString {
+                    for (key, value) in queryParameters {
+                        parameters[key] = value
+                    }
+                }
+                return parameters
+            }
+            print("XXXXXX", request.actionName)
             
             if let action = request.actionName {
                
@@ -100,12 +136,18 @@ enum RBSService {
     var httpMethod: Moya.Method {
         switch self {
         case .executeAction(let request):
-            
-            if(self.isGetAction(request.actionName)) {
-                return .get
+
+            let isExcludedAction = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "")
+
+            if !isExcludedAction {
+                if(self.isGetAction(request.actionName)) {
+                    return .get
+                }
+                
+                return .post
+            } else {
+                return request.httpMethod ?? .post
             }
-            
-            return .post
             
         default: return .get
         }
@@ -114,9 +156,6 @@ enum RBSService {
 
 
 extension RBSService: TargetType, AccessTokenAuthorizable {
-    
-
-    
     var authorizationType: AuthorizationType? {
         switch self {
         default: return .none
@@ -126,10 +165,17 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     var baseURL: URL {
         switch self {
         case .executeAction(let request):
-            if(self.isGetAction(request.actionName)) {
-                return URL(string: globalRbsRegion.getUrl)!
+            
+            let isExcludedAction = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "")
+            
+            if !isExcludedAction {
+                if(self.isGetAction(request.actionName)) {
+                    return URL(string: globalRbsRegion.getUrl)!
+                }
+                return URL(string: globalRbsRegion.postUrl)!
+            } else {
+                return URL(string: "https://\(request.projectId!).\(globalRbsRegion.apiURL)")!
             }
-            return URL(string: globalRbsRegion.postUrl)!
         default:
             return URL(string: globalRbsRegion.postUrl)!
         }
