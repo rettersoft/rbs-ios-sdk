@@ -13,6 +13,8 @@ import ObjectMapper
 
 var globalRbsRegion:RbsRegion = .euWest1
 
+let cloudObjectActions = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"]
+
 enum RBSService {
     
     case getAnonymToken(request: GetAnonymTokenRequest)
@@ -26,7 +28,7 @@ enum RBSService {
         case .getAnonymToken(_): return "/public/anonymous-auth"
         case .executeAction(let request):
 
-            let isExcludedAction = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "")
+            let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
             
             if !isExcludedAction {
                 return "/user/action/\(request.projectId!)/\(request.actionName!)"
@@ -82,7 +84,7 @@ enum RBSService {
             
         case .executeAction(let request):
             
-            if ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "") {
+            if cloudObjectActions.contains(request.actionName ?? "") {
 
                 var parameters: [String: Any] =  [
                     "_token": request.accessToken != nil ? request.accessToken! : "",
@@ -137,7 +139,7 @@ enum RBSService {
         switch self {
         case .executeAction(let request):
 
-            let isExcludedAction = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "")
+            let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
 
             if !isExcludedAction {
                 if(self.isGetAction(request.actionName)) {
@@ -166,7 +168,7 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
         switch self {
         case .executeAction(let request):
             
-            let isExcludedAction = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"].contains(request.actionName ?? "")
+            let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
             
             if !isExcludedAction {
                 if(self.isGetAction(request.actionName)) {

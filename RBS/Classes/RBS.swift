@@ -110,10 +110,11 @@ struct RBSTokenData : Mappable, Decodable {
     }
 }
 
-public struct RBSCloudObjectItem {
-    let classID: String
-    let instanceID: String?
-    let keyValue: (key: String, value: String)?
+
+public struct RBSCloudObjectOptions {
+    public var classID: String?
+    public var instanceID: String?
+    public var keyValue: (key: String, value: String)?
     public var method: String?
     public var headers: [String: String]?
     public var queryString: [String: String]?
@@ -121,7 +122,7 @@ public struct RBSCloudObjectItem {
     public var payload: [String: Any]?
     
     public init(
-        classID: String,
+        classID: String? = nil,
         instanceID: String? = nil,
         keyValue: (key: String, value: String)? = nil,
         method: String? = nil,
@@ -191,7 +192,8 @@ enum RBSKeychainKey {
 enum RBSError : Error {
     case TokenError,
          cloudNotConfigured,
-         noCloudSnapFound
+         noCloudSnapFound,
+         classIdRequired
 }
 
 extension String: LocalizedError {
@@ -295,22 +297,22 @@ public class RBS {
         
         GTMSessionFetcherService.swizzleDelegateDispatcherForFetcher()
         
-//        let firebaseOptions = FirebaseOptions(
-//            googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
-//            gcmSenderID: "814752823492"
-//        )
-////        let firebaseOptions = FirebaseOptions()
-//        firebaseOptions.projectID = "rtbs-c82e1"
-//        firebaseOptions.apiKey = "AIzaSyCAbRGoJSyRHoO5Od-QRktSbRpSny0ebbM"
-//
-//        FirebaseApp.configure(name: "rbs", options: firebaseOptions)
-//
-//        guard let app = FirebaseApp.app(name: "rbs") else {
-//            return
-//        }
-//
-//        firebaseApp = app
-//        db = Firestore.firestore(app: app)
+        //        let firebaseOptions = FirebaseOptions(
+        //            googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
+        //            gcmSenderID: "814752823492"
+        //        )
+        ////        let firebaseOptions = FirebaseOptions()
+        //        firebaseOptions.projectID = "rtbs-c82e1"
+        //        firebaseOptions.apiKey = "AIzaSyCAbRGoJSyRHoO5Od-QRktSbRpSny0ebbM"
+        //
+        //        FirebaseApp.configure(name: "rbs", options: firebaseOptions)
+        //
+        //        guard let app = FirebaseApp.app(name: "rbs") else {
+        //            return
+        //        }
+        //
+        //        firebaseApp = app
+        //        db = Firestore.firestore(app: app)
     }
     
     private var safeNow:Date {
@@ -392,6 +394,47 @@ public class RBS {
         return try self.getAnonymToken()
     }
     
+    private func initFirebaseApp(tokenData:RBSTokenData) {
+        if let firebaseToken = tokenData.firebase?.customToken,
+           let apiKey = tokenData.firebase?.apiKey,
+           let projectID = tokenData.firebase?.projectId {
+            
+            let fToken = firebaseToken
+            
+            let firebaseOptions = FirebaseOptions(
+                googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
+                gcmSenderID: "814752823492"
+            )
+            
+            firebaseOptions.projectID = projectID
+            firebaseOptions.apiKey = apiKey
+            
+            DispatchQueue.main.async { // TODO: Be careful
+                
+                if self.firebaseApp == nil {
+                    FirebaseApp.configure(name: "rbs", options: firebaseOptions)
+                    
+                    guard let app = FirebaseApp.app(name: "rbs") else {
+                        print("---FB Not Configured Yet")
+                        return
+                    }
+                    
+                    self.firebaseApp = app
+                    self.db = Firestore.firestore(app: app)
+                }
+                
+                if let app = self.firebaseApp {
+                    Auth.auth(app: app).signIn(withCustomToken: fToken) { (resp, error) in
+                        print("-----", resp?.credential, resp?.additionalUserInfo, error)
+                    }
+                }
+                
+            }
+        }
+    }
+    
+    
+    
     private func saveTokenData(tokenData:RBSTokenData?) {
         print("saveTokenData called")
         var storedUserId:String? = nil
@@ -435,40 +478,10 @@ public class RBS {
                     
                     cloudObjects.removeAll()
                     
-                    var fToken = ""
-                    if firebaseApp == nil {
-                        if let firebaseToken = tokenData.firebase?.customToken,
-                           let apiKey = tokenData.firebase?.apiKey,
-                           let projectID = tokenData.firebase?.projectId {
-                            
-                            fToken = firebaseToken
-                            
-                            let firebaseOptions = FirebaseOptions(
-                                googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
-                                gcmSenderID: "814752823492"
-                            )
-                                                        
-                            firebaseOptions.projectID = projectID
-                            firebaseOptions.apiKey = apiKey
-                            
-                            DispatchQueue.main.async { // TODO: Be careful
-                                FirebaseApp.configure(name: "rbs", options: firebaseOptions)
-                                
-                                guard let app = FirebaseApp.app(name: "rbs") else {
-                                    print("---FB Not Configured Yet")
-                                    return
-                                }
-                                
-                                self.firebaseApp = app
-                                self.db = Firestore.firestore(app: app)
-                                
-                                Auth.auth(app: app).signIn(withCustomToken: fToken) { (resp, error) in
-                                    print("-----", resp?.credential, resp?.additionalUserInfo, error)
-                                }
-                            }
-                        }
-                    }
-
+                    initFirebaseApp(tokenData: tokenData)
+                    
+                    
+                    
                     if anonymous {
                         DispatchQueue.main.async {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
@@ -481,6 +494,10 @@ public class RBS {
                     }
                 } else {
                     
+                }
+                
+                if firebaseApp == nil {
+                    initFirebaseApp(tokenData: tokenData)
                 }
                 
             }
@@ -547,7 +564,7 @@ public class RBS {
         data:[String:Any],
         culture: String?,
         headers:[String:String]?,
-        cloudItem: RBSCloudObjectItem? = nil
+        cloudObjectOptions: RBSCloudObjectOptions? = nil
     ) throws -> [Any] {
         print("executeAction called")
         let req = ExecuteActionRequest()
@@ -557,12 +574,12 @@ public class RBS {
         req.payload = data
         req.headers = headers
         req.culture = culture
-        req.classID = cloudItem?.classID
-        req.instanceID = cloudItem?.instanceID
-        req.keyValue = cloudItem?.keyValue
-        req.httpMethod = cloudItem?.httpMethod
-        req.method = cloudItem?.method
-
+        req.classID = cloudObjectOptions?.classID
+        req.instanceID = cloudObjectOptions?.instanceID
+        req.keyValue = cloudObjectOptions?.keyValue
+        req.httpMethod = cloudObjectOptions?.httpMethod
+        req.method = cloudObjectOptions?.method
+        
         var errorResponse:BaseErrorResponse?
         var retVal:[Any]? = nil
         let semaphoreLocal = DispatchSemaphore(value: 0)
@@ -574,9 +591,13 @@ public class RBS {
                     if let json = try? JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
                         retVal = json
                     }
-
+                    
                     if let _ = try? JSONSerialization.jsonObject(with: response.data, options: []) {
                         retVal = [response.data]
+                    }
+                    
+                    if retVal == nil {
+                        retVal = []
                     }
                     
                 } else {
@@ -646,7 +667,7 @@ public class RBS {
                 object.state.removeListeners()
             }
             cloudObjects.removeAll()
-
+            
             guard let app = firebaseApp else {
                 return
             }
@@ -714,26 +735,32 @@ public class RBS {
     }
     
     public func getCloudObject(
-        with item: RBSCloudObjectItem,
+        with options: RBSCloudObjectOptions,
         onSuccess: @escaping (RBSCloudObject) -> Void,
         onError: @escaping (Error) -> Void
     ) {
-        if let instance = item.instanceID,
-           let object = cloudObjects.filter({ $0.classID == item.classID && $0.instanceID == instance }).first {
+        
+        guard let classId = options.classID else {
+            onError(RBSError.classIdRequired)
+            return
+        }
+        
+        if let instance = options.instanceID,
+           let object = cloudObjects.filter({ $0.classID == classId && $0.instanceID == instance }).first {
             onSuccess(object)
             return
         }
         
-        var parameters: [String: Any] = ["classId": item.classID]
-        if let instanceID = item.instanceID {
+        var parameters: [String: Any] = ["classId": classId]
+        if let instanceID = options.instanceID {
             parameters["instanceId"] = instanceID
         }
-
+        
         send(
             action: "rbs.core.request.INSTANCE",
             data: parameters,
             headers: [:],
-            cloudItem: RBSCloudObjectItem(classID: item.classID, instanceID: item.instanceID)
+            cloudObjectOptions: RBSCloudObjectOptions(classID: options.classID, instanceID: options.instanceID)
         ) { [weak self] (response) in
             guard let self = self else {
                 return
@@ -742,10 +769,10 @@ public class RBS {
             guard let firstResponse = response.first,
                   let data = firstResponse as? Data,
                   let cloudResponse = try? JSONDecoder().decode(RBSCloudObjectResponse.self, from: data) else {
-                return
-            }
+                      return
+                  }
             
-        
+            
             if let respInstanceId = cloudResponse.instanceId {
                 
                 var userIdentity: String?
@@ -763,12 +790,12 @@ public class RBS {
                     }
                 }
                 
-                if let object = self.cloudObjects.filter({ $0.classID == item.classID && $0.instanceID == respInstanceId }).first {
+                if let object = self.cloudObjects.filter({ $0.classID == classId && $0.instanceID == respInstanceId }).first {
                     onSuccess(object)
                 } else {
                     let object = RBSCloudObject(
                         projectID: self.projectId,
-                        classID: item.classID,
+                        classID: classId,
                         instanceID: respInstanceId,
                         userID: userId ?? "",
                         userIdentity: userIdentity ?? "",
@@ -781,14 +808,14 @@ public class RBS {
         } onError: { (error) in
             onError(error)
         }
-
+        
     }
     
     public func send(action actionName:String,
                      data:[String:Any],
                      headers:[String:String]?,
                      culture: RBSCulture? = nil,
-                     cloudItem: RBSCloudObjectItem? = nil,
+                     cloudObjectOptions: RBSCloudObjectOptions? = nil,
                      onSuccess: @escaping (_ result:[Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
@@ -812,7 +839,7 @@ public class RBS {
                             data: data,
                             culture: culture?.rawValue,
                             headers: headers,
-                            cloudItem: cloudItem
+                            cloudObjectOptions: cloudObjectOptions
                         )
                         
                         DispatchQueue.main.async {
@@ -824,7 +851,7 @@ public class RBS {
                         }
                     }
                 }
-
+                
             } catch {
                 
             }
@@ -871,10 +898,14 @@ public class RBSCloudObject {
     }
     
     public func call(
-        with item: RBSCloudObjectItem,
+        with options: RBSCloudObjectOptions,
         eventFired: @escaping ([Any]) -> Void,
         errorFired: @escaping (Error) -> Void
     ) {
+        
+        var options2 = options
+        options2.classID = self.classID
+        options2.instanceID = self.instanceID
         
         guard let rbs = rbs else {
             return
@@ -884,7 +915,7 @@ public class RBSCloudObject {
             action: "rbs.core.request.CALL",
             data: [:],
             headers: [:],
-            cloudItem: item
+            cloudObjectOptions: options2
         ) { (response) in
             eventFired(response)
         } onError: { (error) in
@@ -893,7 +924,7 @@ public class RBSCloudObject {
     }
     
     public func getState(
-        with item: RBSCloudObjectItem,
+        with options: RBSCloudObjectOptions,
         eventFired: @escaping ([Any]) -> Void,
         errorFired: @escaping (Error) -> Void
     ) {
@@ -906,7 +937,7 @@ public class RBSCloudObject {
             action: "rbs.core.request.STATE",
             data: [:],
             headers: [:],
-            cloudItem: item
+            cloudObjectOptions: options
         ) { (response) in
             eventFired(response)
         } onError: { (error) in
@@ -941,7 +972,7 @@ public class RBSCloudObjectState {
         errorFired: @escaping (Error) -> Void
     ) {
         var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
-                
+        
         guard let database = db else {
             errorFired(RBSError.cloudNotConfigured)
             return
@@ -956,7 +987,7 @@ public class RBSCloudObjectState {
                         errorFired(error!)
                         return
                     }
-                                    
+                    
                     guard let dataSnap = snap?.data() else {
                         errorFired(RBSError.noCloudSnapFound)
                         return
@@ -972,7 +1003,7 @@ public class RBSCloudObjectState {
                         errorFired(error!)
                         return
                     }
-                                    
+                    
                     guard let dataSnap = snap?.data() else {
                         errorFired(RBSError.noCloudSnapFound)
                         return
@@ -986,7 +1017,7 @@ public class RBSCloudObjectState {
                     errorFired(error!)
                     return
                 }
-                                
+                
                 guard let dataSnap = snap?.data() else {
                     errorFired(RBSError.noCloudSnapFound)
                     return

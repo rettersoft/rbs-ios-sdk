@@ -11,10 +11,10 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "69ec1ef0039b4332b3e102f082a98ec2", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta))
     
     var cloudObject: RBSCloudObject?
-    var cloudItem = RBSCloudObjectItem(classID: "ChatRoom", instanceID: "01FPJ1GSS8AF47CYX1FD5FB62X")
+//    var cloudItem = RBSCloudObjectItem(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,7 +43,7 @@ class ViewController: UIViewController {
     @IBAction func searchProducts(_ sender: Any) {
         // MARK: - Get Cloud Object
         
-        rbs.getCloudObject(with: cloudItem) { [weak self] (newObject) in
+        rbs.getCloudObject(with: RBSCloudObjectOptions(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")) { [weak self] (newObject) in
             print("--- Cloud Object Created ---")
             self?.cloudObject = newObject
         } onError: { (error) in
@@ -77,13 +77,14 @@ class ViewController: UIViewController {
         
     }
     @IBAction func testAction(_ sender: Any) {
-        cloudItem.method = "sendMessage"
+        
+        
         if let object = cloudObject {
             
             // MARK: - Call Method
             
             object.call(
-                with: cloudItem
+                with: RBSCloudObjectOptions(method: "sayHello")
             ) { (response) in
                 if let firstResponse = response.first,
                    let data = firstResponse as? Data {
@@ -96,17 +97,17 @@ class ViewController: UIViewController {
             
             // MARK: - Get State via REST
             
-            object.getState(
-                with: cloudItem
-            ) { (response) in
-                if let firstResponse = response.first,
-                   let data = firstResponse as? Data {
-                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
-                    print("---GETSTATE Response ->", json)
-                }
-            } errorFired: { (error) in
-                print("---GETSTATE Error ->", error)
-            }
+//            object.getState(
+//                with: cloudItem
+//            ) { (response) in
+//                if let firstResponse = response.first,
+//                   let data = firstResponse as? Data {
+//                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
+//                    print("---GETSTATE Response ->", json)
+//                }
+//            } errorFired: { (error) in
+//                print("---GETSTATE Error ->", error)
+//            }
         }
     }
 }
