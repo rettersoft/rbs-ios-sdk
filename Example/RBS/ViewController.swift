@@ -38,6 +38,7 @@ class ViewController: UIViewController {
     }
     @IBAction func signoutTapped(_ sender: Any) {
         rbs.signOut()
+        cloudObject = nil
     }
 
     @IBAction func searchProducts(_ sender: Any) {
@@ -52,6 +53,14 @@ class ViewController: UIViewController {
     }
         
     @IBAction func loginBusinessUser(_ sender: Any) {
+        
+        guard cloudObject != nil else {
+            let alert = UIAlertController(title: "Warning", message: "Please firstly get the cloud object.", preferredStyle: .alert)
+            let OKAction = UIAlertAction(title: "OK", style: .default)
+            alert.addAction(OKAction)
+            present(alert, animated: true)
+            return
+        }
         
         // MARK: - Get Objects States
         
@@ -77,7 +86,13 @@ class ViewController: UIViewController {
         
     }
     @IBAction func testAction(_ sender: Any) {
-        
+        guard cloudObject != nil else {
+            let alert = UIAlertController(title: "Warning", message: "Please firstly get the cloud object.", preferredStyle: .alert)
+            let OKAction = UIAlertAction(title: "OK", style: .default)
+            alert.addAction(OKAction)
+            present(alert, animated: true)
+            return
+        }
         
         if let object = cloudObject {
             

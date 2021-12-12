@@ -944,6 +944,10 @@ public class RBSCloudObject {
             errorFired(error)
         }
     }
+    
+    public func unsubscribeStates() {
+        state.removeListeners()
+    }
 }
 
 public class RBSCloudObjectState {
@@ -1026,6 +1030,10 @@ public class RBSCloudObjectState {
                 eventFired(dataSnap)
             }
         }
+    }
+    
+    public func unscribeState() {
+        listener?.remove()
     }
 }
 
