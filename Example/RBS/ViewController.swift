@@ -53,77 +53,72 @@ class ViewController: UIViewController {
     }
         
     @IBAction func loginBusinessUser(_ sender: Any) {
-        
-        guard cloudObject != nil else {
-            let alert = UIAlertController(title: "Warning", message: "Please firstly get the cloud object.", preferredStyle: .alert)
-            let OKAction = UIAlertAction(title: "OK", style: .default)
-            alert.addAction(OKAction)
-            present(alert, animated: true)
+        guard let object = cloudObject else {
+            showCloudAlert()
             return
         }
         
         // MARK: - Get Objects States
         
-        if let object = cloudObject {
-            object.state.user.subscribe { (data) in
-                print("---User State ->", data)
-            } errorFired: { (error) in
-                print("---User State Error ->", error)
-            }
-
-            object.state.role.subscribe { (data) in
-                print("---RoleState State ->", data)
-            } errorFired: { (error) in
-                print("---Role State Error ->", error)
-            }
-
-            object.state.public.subscribe { (data) in
-                print("---Public State ->", data)
-            } errorFired: { (error) in
-                print("---Public State Error ->", error)
-            }
+        object.state.user.subscribe { (data) in
+            print("---User State ->", data)
+        } errorFired: { (error) in
+            print("---User State Error ->", error)
+        }
+        
+        object.state.role.subscribe { (data) in
+            print("---RoleState State ->", data)
+        } errorFired: { (error) in
+            print("---Role State Error ->", error)
+        }
+        
+        object.state.public.subscribe { (data) in
+            print("---Public State ->", data)
+        } errorFired: { (error) in
+            print("---Public State Error ->", error)
         }
         
     }
     @IBAction func testAction(_ sender: Any) {
-        guard cloudObject != nil else {
-            let alert = UIAlertController(title: "Warning", message: "Please firstly get the cloud object.", preferredStyle: .alert)
-            let OKAction = UIAlertAction(title: "OK", style: .default)
-            alert.addAction(OKAction)
-            present(alert, animated: true)
+        guard let object = cloudObject else {
+            showCloudAlert()
             return
         }
         
-        if let object = cloudObject {
-            
-            // MARK: - Call Method
-            
-            object.call(
-                with: RBSCloudObjectOptions(method: "sayHello")
-            ) { (response) in
-                if let firstResponse = response.first,
-                   let data = firstResponse as? Data {
-                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
-                    print("---Method Response ->", json)
-                }
-            } errorFired: { (error) in
-                print("---Method Error ->", error)
+        // MARK: - Call Method
+        
+        object.call(
+            with: RBSCloudObjectOptions(method: "sayHello")
+        ) { (response) in
+            if let firstResponse = response.first,
+               let data = firstResponse as? Data {
+                let json = try? JSONSerialization.jsonObject(with: data, options: [])
+                print("---Method Response ->", json)
             }
-            
-            // MARK: - Get State via REST
-            
-//            object.getState(
-//                with: cloudItem
-//            ) { (response) in
-//                if let firstResponse = response.first,
-//                   let data = firstResponse as? Data {
-//                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
-//                    print("---GETSTATE Response ->", json)
-//                }
-//            } errorFired: { (error) in
-//                print("---GETSTATE Error ->", error)
-//            }
+        } errorFired: { (error) in
+            print("---Method Error ->", error)
         }
+        
+        // MARK: - Get State via REST
+        
+        //            object.getState(
+        //                with: cloudItem
+        //            ) { (response) in
+        //                if let firstResponse = response.first,
+        //                   let data = firstResponse as? Data {
+        //                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
+        //                    print("---GETSTATE Response ->", json)
+        //                }
+        //            } errorFired: { (error) in
+        //                print("---GETSTATE Error ->", error)
+        //            }
+    }
+    
+    private func showCloudAlert() {
+        let alert = UIAlertController(title: "Warning", message: "Please firstly get the cloud object.", preferredStyle: .alert)
+        let OKAction = UIAlertAction(title: "OK", style: .default)
+        alert.addAction(OKAction)
+        present(alert, animated: true)
     }
 }
 

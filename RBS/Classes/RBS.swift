@@ -1032,7 +1032,7 @@ public class RBSCloudObjectState {
         }
     }
     
-    public func unscribeState() {
+    public func unssubscribeState() {
         listener?.remove()
     }
 }
