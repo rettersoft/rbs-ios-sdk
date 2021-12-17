@@ -119,7 +119,7 @@ public struct RBSCloudObjectOptions {
     public var headers: [String: String]?
     public var queryString: [String: String]?
     public var httpMethod: Moya.Method?
-    public var payload: [String: Any]?
+    public var data: [String: Any]?
     
     public init(
         classID: String? = nil,
@@ -129,7 +129,7 @@ public struct RBSCloudObjectOptions {
         headers: [String: String]? = nil,
         queryString: [String: String]? = nil,
         httpMethod: Moya.Method? = nil,
-        payload: [String: Any]? = nil
+        data: [String: Any]? = nil
     ) {
         self.classID = classID
         self.instanceID = instanceID
@@ -138,7 +138,7 @@ public struct RBSCloudObjectOptions {
         self.headers = headers
         self.queryString = queryString
         self.httpMethod = httpMethod
-        self.payload = payload
+        self.data = data
     }
 }
 
@@ -346,6 +346,7 @@ public class RBS {
                 
             ]
         ] as [String : Any]
+        TrustKit.setLoggerBlock { (_) in }
         TrustKit.initSharedInstance(withConfiguration:trustKitConfig)
     }
     
@@ -587,7 +588,6 @@ public class RBS {
         self.service.request(.executeAction(request: req)) { result in
             switch result {
             case .success(let response):
-                print("---\(req.actionName)", response.statusCode)
                 if (200...299).contains(response.statusCode) {
                     if let json = try? JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
                         retVal = json
@@ -752,16 +752,14 @@ public class RBS {
             return
         }
         
-        var parameters: [String: Any] = ["classId": classId]
-        if let instanceID = options.instanceID {
-            parameters["instanceId"] = instanceID
-        }
+        let parameters: [String: Any] = options.data?.compactMapValues( { $0 }) ?? [:]
+        let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
         
         send(
             action: "rbs.core.request.INSTANCE",
             data: parameters,
-            headers: [:],
-            cloudObjectOptions: RBSCloudObjectOptions(classID: options.classID, instanceID: options.instanceID)
+            headers: headers,
+            cloudObjectOptions: options
         ) { [weak self] (response) in
             guard let self = self else {
                 return
@@ -908,14 +906,17 @@ public class RBSCloudObject {
         options2.classID = self.classID
         options2.instanceID = self.instanceID
         
+        let parameters: [String: Any] = options.data?.compactMapValues( { $0 }) ?? [:]
+        let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
+        
         guard let rbs = rbs else {
             return
         }
         
         rbs.send(
             action: "rbs.core.request.CALL",
-            data: [:],
-            headers: [:],
+            data: parameters,
+            headers: headers,
             cloudObjectOptions: options2
         ) { (response) in
             eventFired(response)
@@ -934,10 +935,13 @@ public class RBSCloudObject {
             return
         }
         
+        let parameters: [String: Any] = options.data?.compactMapValues( { $0 }) ?? [:]
+        let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
+        
         rbs.send(
             action: "rbs.core.request.STATE",
-            data: [:],
-            headers: [:],
+            data: parameters,
+            headers: headers,
             cloudObjectOptions: options
         ) { (response) in
             eventFired(response)

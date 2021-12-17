@@ -14,7 +14,6 @@ class ViewController: UIViewController {
     let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta))
     
     var cloudObject: RBSCloudObject?
-//    var cloudItem = RBSCloudObjectItem(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,8 +42,10 @@ class ViewController: UIViewController {
 
     @IBAction func searchProducts(_ sender: Any) {
         // MARK: - Get Cloud Object
+//        let cloudOpts = RBSCloudObjectOptions(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")
+        let cloudOpts = RBSCloudObjectOptions(classID: "User", keyValue: ("username", "loodos2"))
         
-        rbs.getCloudObject(with: RBSCloudObjectOptions(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")) { [weak self] (newObject) in
+        rbs.getCloudObject(with: cloudOpts) { [weak self] (newObject) in
             print("--- Cloud Object Created ---")
             self?.cloudObject = newObject
         } onError: { (error) in
@@ -88,12 +89,22 @@ class ViewController: UIViewController {
         // MARK: - Call Method
         
         object.call(
-            with: RBSCloudObjectOptions(method: "sayHello")
+            with: RBSCloudObjectOptions(method: "signin", data: ["password": "123123"])
         ) { (response) in
             if let firstResponse = response.first,
                let data = firstResponse as? Data {
                 let json = try? JSONSerialization.jsonObject(with: data, options: [])
                 print("---Method Response ->", json)
+                
+                object.call(with: RBSCloudObjectOptions(method: "updateProfile", data: ["username": "loodos2"])) { (responseX) in
+                    if let firstResponseX = responseX.first,
+                       let dataX = firstResponseX as? Data {
+                        let json = try? JSONSerialization.jsonObject(with: dataX, options: [])
+                        print("---Update Response ->", json)
+                    }
+                } errorFired: { (error) in
+                    print("---Method Error ->", error)
+                }
             }
         } errorFired: { (error) in
             print("---Method Error ->", error)
