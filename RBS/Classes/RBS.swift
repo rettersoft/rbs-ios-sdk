@@ -11,6 +11,13 @@ import FirebaseFirestore
 import FirebaseAuth
 import GTMSessionFetcher
 
+
+public struct RBSCloudObjectResponse {
+    public let statusCode: Int
+    public let headers: [String:String]?
+    public let body: Data?
+}
+
 public enum RbsRegion {
     case euWest1, euWest1Beta
     
@@ -119,7 +126,7 @@ public struct RBSCloudObjectOptions {
     public var headers: [String: String]?
     public var queryString: [String: String]?
     public var httpMethod: Moya.Method?
-    public var data: [String: Any]?
+    public var body: [String: Any]?
     
     public init(
         classID: String? = nil,
@@ -129,7 +136,7 @@ public struct RBSCloudObjectOptions {
         headers: [String: String]? = nil,
         queryString: [String: String]? = nil,
         httpMethod: Moya.Method? = nil,
-        data: [String: Any]? = nil
+        body: [String: Any]? = nil
     ) {
         self.classID = classID
         self.instanceID = instanceID
@@ -138,11 +145,11 @@ public struct RBSCloudObjectOptions {
         self.headers = headers
         self.queryString = queryString
         self.httpMethod = httpMethod
-        self.data = data
+        self.body = body
     }
 }
 
-struct RBSCloudObjectResponse: Decodable {
+struct RBSCloudObjectInstanceResponse: Decodable {
     let isNewInstance: Bool?
     let methods: [RBSCloudObjectMethod]?
     let instanceId: String?
@@ -583,27 +590,51 @@ public class RBS {
         req.method = cloudObjectOptions?.method
         
         var errorResponse:BaseErrorResponse?
+        
         var retVal:[Any]? = nil
         let semaphoreLocal = DispatchSemaphore(value: 0)
         self.service.request(.executeAction(request: req)) { result in
             switch result {
             case .success(let response):
                 if (200...299).contains(response.statusCode) {
-                    if let json = try? JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
-                        retVal = json
+                    
+                    if cloudObjectOptions != nil {
+                        
+                        retVal = [RBSCloudObjectResponse(statusCode: response.statusCode,
+                                                         headers: response.response?.headers.dictionary,
+                                                         body: response.data)]
+                    } else {
+                        
+                        if let json = try? JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
+                            retVal = json
+                        }
+                        
+                        if let _ = try? JSONSerialization.jsonObject(with: response.data, options: []) {
+                            retVal = [response.data]
+                        }
+                        
+                        if retVal == nil {
+                            retVal = []
+                        }
                     }
                     
-                    if let _ = try? JSONSerialization.jsonObject(with: response.data, options: []) {
-                        retVal = [response.data]
-                    }
-                    
-                    if retVal == nil {
-                        retVal = []
-                    }
                     
                 } else {
-                    errorResponse = try? response.map(BaseErrorResponse.self)
-                    errorResponse?.httpStatusCode = response.statusCode
+                    
+                    if cloudObjectOptions != nil {
+                        
+                        errorResponse = try? response.map(BaseErrorResponse.self)
+                        errorResponse?.httpStatusCode = response.statusCode
+                        errorResponse?.cloudObjectResponse = RBSCloudObjectResponse(statusCode: response.statusCode,
+                                                                                    headers: response.response?.headers.dictionary,
+                                                                                    body: response.data)
+                                                
+                    } else {
+                        errorResponse = try? response.map(BaseErrorResponse.self)
+                        errorResponse?.httpStatusCode = response.statusCode
+                    }
+                    
+                    
                 }
                 break
             case .failure(let f):
@@ -752,7 +783,7 @@ public class RBS {
             return
         }
         
-        let parameters: [String: Any] = options.data?.compactMapValues( { $0 }) ?? [:]
+        let parameters: [String: Any] = options.body?.compactMapValues( { $0 }) ?? [:]
         let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
         
         send(
@@ -765,9 +796,9 @@ public class RBS {
                 return
             }
             
-            guard let firstResponse = response.first,
-                  let data = firstResponse as? Data,
-                  let cloudResponse = try? JSONDecoder().decode(RBSCloudObjectResponse.self, from: data) else {
+            guard let firstResponse = response.first as? RBSCloudObjectResponse,
+                  let data = firstResponse.body,
+                  let cloudResponse = try? JSONDecoder().decode(RBSCloudObjectInstanceResponse.self, from: data) else {
                       return
                   }
             
@@ -898,15 +929,15 @@ public class RBSCloudObject {
     
     public func call(
         with options: RBSCloudObjectOptions,
-        eventFired: @escaping ([Any]) -> Void,
-        errorFired: @escaping (Error) -> Void
+        onSuccess: @escaping (RBSCloudObjectResponse) -> Void,
+        onError: @escaping (RBSCloudObjectResponse) -> Void
     ) {
         
         var options2 = options
         options2.classID = self.classID
         options2.instanceID = self.instanceID
         
-        let parameters: [String: Any] = options.data?.compactMapValues( { $0 }) ?? [:]
+        let parameters: [String: Any] = options.body?.compactMapValues( { $0 }) ?? [:]
         let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
         
         guard let rbs = rbs else {
@@ -919,23 +950,23 @@ public class RBSCloudObject {
             headers: headers,
             cloudObjectOptions: options2
         ) { (response) in
-            eventFired(response)
+            onSuccess(response[0] as! RBSCloudObjectResponse)
         } onError: { (error) in
-            errorFired(error)
+            onError((error as! BaseErrorResponse).cloudObjectResponse!)
         }
     }
     
     public func getState(
         with options: RBSCloudObjectOptions,
-        eventFired: @escaping ([Any]) -> Void,
-        errorFired: @escaping (Error) -> Void
+        onSuccess: @escaping (Data) -> Void,
+        onError: @escaping (Error) -> Void
     ) {
         
         guard let rbs = rbs else {
             return
         }
         
-        let parameters: [String: Any] = options.data?.compactMapValues( { $0 }) ?? [:]
+        let parameters: [String: Any] = options.body?.compactMapValues( { $0 }) ?? [:]
         let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
         
         rbs.send(
@@ -944,9 +975,9 @@ public class RBSCloudObject {
             headers: headers,
             cloudObjectOptions: options
         ) { (response) in
-            eventFired(response)
+            onSuccess(response[0] as! Data)
         } onError: { (error) in
-            errorFired(error)
+            onError(error)
         }
     }
     
@@ -977,13 +1008,13 @@ public class RBSCloudObjectState {
     }
     
     public func subscribe(
-        eventFired: @escaping ([String: Any]) -> Void,
-        errorFired: @escaping (Error) -> Void
+        onSuccess: @escaping ([String: Any]) -> Void,
+        onError: @escaping (Error) -> Void
     ) {
         var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
         
         guard let database = db else {
-            errorFired(RBSError.cloudNotConfigured)
+            onError(RBSError.cloudNotConfigured)
             return
         }
         
@@ -993,46 +1024,46 @@ public class RBSCloudObjectState {
             listener = database.document(path)
                 .addSnapshotListener { (snap, error) in
                     guard error == nil else {
-                        errorFired(error!)
+                        onError(error!)
                         return
                     }
                     
                     guard let dataSnap = snap?.data() else {
-                        errorFired(RBSError.noCloudSnapFound)
+                        onError(RBSError.noCloudSnapFound)
                         return
                     }
                     
-                    eventFired(dataSnap)
+                    onSuccess(dataSnap)
                 }
         case .role:
             path.append("roleState/\(userIdentity)")
             listener = database.document(path)
                 .addSnapshotListener { (snap, error) in
                     guard error == nil else {
-                        errorFired(error!)
+                        onError(error!)
                         return
                     }
                     
                     guard let dataSnap = snap?.data() else {
-                        errorFired(RBSError.noCloudSnapFound)
+                        onError(RBSError.noCloudSnapFound)
                         return
                     }
                     
-                    eventFired(dataSnap)
+                    onSuccess(dataSnap)
                 }
         case .public:
             listener = database.document(path).addSnapshotListener { (snap, error) in
                 guard error == nil else {
-                    errorFired(error!)
+                    onError(error!)
                     return
                 }
                 
                 guard let dataSnap = snap?.data() else {
-                    errorFired(RBSError.noCloudSnapFound)
+                    onError(RBSError.noCloudSnapFound)
                     return
                 }
                 
-                eventFired(dataSnap)
+                onSuccess(dataSnap)
             }
         }
     }

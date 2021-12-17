@@ -39,10 +39,10 @@ class ViewController: UIViewController {
         rbs.signOut()
         cloudObject = nil
     }
-
+    
     @IBAction func searchProducts(_ sender: Any) {
         // MARK: - Get Cloud Object
-//        let cloudOpts = RBSCloudObjectOptions(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")
+        //        let cloudOpts = RBSCloudObjectOptions(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")
         let cloudOpts = RBSCloudObjectOptions(classID: "User", keyValue: ("username", "loodos2"))
         
         rbs.getCloudObject(with: cloudOpts) { [weak self] (newObject) in
@@ -52,7 +52,7 @@ class ViewController: UIViewController {
             print(error)
         }
     }
-        
+    
     @IBAction func loginBusinessUser(_ sender: Any) {
         guard let object = cloudObject else {
             showCloudAlert()
@@ -61,21 +61,23 @@ class ViewController: UIViewController {
         
         // MARK: - Get Objects States
         
+        
+        
         object.state.user.subscribe { (data) in
             print("---User State ->", data)
-        } errorFired: { (error) in
+        } onError: { (error) in
             print("---User State Error ->", error)
         }
         
         object.state.role.subscribe { (data) in
             print("---RoleState State ->", data)
-        } errorFired: { (error) in
+        } onError: { (error) in
             print("---Role State Error ->", error)
         }
         
         object.state.public.subscribe { (data) in
             print("---Public State ->", data)
-        } errorFired: { (error) in
+        } onError: { (error) in
             print("---Public State Error ->", error)
         }
         
@@ -89,25 +91,27 @@ class ViewController: UIViewController {
         // MARK: - Call Method
         
         object.call(
-            with: RBSCloudObjectOptions(method: "signin", data: ["password": "123123"])
-        ) { (response) in
-            if let firstResponse = response.first,
-               let data = firstResponse as? Data {
-                let json = try? JSONSerialization.jsonObject(with: data, options: [])
-                print("---Method Response ->", json)
-                
-                object.call(with: RBSCloudObjectOptions(method: "updateProfile", data: ["username": "loodos2"])) { (responseX) in
-                    if let firstResponseX = responseX.first,
-                       let dataX = firstResponseX as? Data {
-                        let json = try? JSONSerialization.jsonObject(with: dataX, options: [])
-                        print("---Update Response ->", json)
-                    }
-                } errorFired: { (error) in
-                    print("---Method Error ->", error)
-                }
-            }
-        } errorFired: { (error) in
+            with: RBSCloudObjectOptions(method: "signin2", body: ["password": "1231232"])
+        ) { (methodResponse) in
+            
+            let json = try? JSONSerialization.jsonObject(with: methodResponse.body!, options: [])
+            print(json)
+//
+//            object.call(with: RBSCloudObjectOptions(method: "updateProfile", body: ["username": "loodos2"])) { (responseX) in
+//                if let firstResponseX = responseX.first,
+//                   let dataX = firstResponseX as? Data {
+//                    let json = try? JSONSerialization.jsonObject(with: dataX, options: [])
+//                    print("---Update Response ->", json)
+//                }
+//            } onError: { (error) in
+//                print("---Method Error ->", error)
+//            }
+            
+        } onError: { (error) in
             print("---Method Error ->", error)
+            
+            let json = try? JSONSerialization.jsonObject(with: error.body!, options: [])
+            print(json)
         }
         
         // MARK: - Get State via REST

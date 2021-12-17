@@ -63,10 +63,12 @@ enum NetworkError : Error {
     case connection_lost
 }
 
+
 class BaseErrorResponse: Decodable, Error {
     
     var code: Int? // unknown
     var httpStatusCode: Int? // unknown
+    var cloudObjectResponse: RBSCloudObjectResponse?
     
     private enum CodingKeys: String, CodingKey { case code, message, httpStatusCode }
     
