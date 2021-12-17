@@ -17,7 +17,7 @@ public enum RbsRegion {
     var getUrl:String {
         switch self {
         case .euWest1: return "https://core.rtbs.io"
-        case .euWest1Beta: return "https://core-test.rettermobile.com"
+        case .euWest1Beta: return "https://core-test.rtbs.io"
         }
     }
     
@@ -340,6 +340,7 @@ public class RBS {
             kTSKPinnedDomains: [
                 "core.rtbs.io": pinningConfig,
                 "core-test.rettermobile.com": pinningConfig,
+                "core-test.rtbs.io": pinningConfig,
                 "core-internal.rtbs.io": pinningConfig,
                 "core-internal-beta.rtbs.io": pinningConfig
                 
