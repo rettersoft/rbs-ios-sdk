@@ -1,6 +1,6 @@
 {
   "name": "RBS",
-  "version": "0.5.12",
+  "version": "1.0.1",
   "summary": "RBS iOS SDK.",
   "description": "TODO: Add long description of the pod here.",
   "homepage": "https://github.com/rettersoft/rbs-ios-sdk",
@@ -13,7 +13,7 @@
   },
   "source": {
     "git": "https://github.com/rettersoft/rbs-ios-sdk.git",
-    "tag": "0.5.12"
+    "tag": "1.0.1"
   },
   "platforms": {
     "ios": "11.0"

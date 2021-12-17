@@ -340,7 +340,7 @@ PODS:
   - nanopb/encode (1.30906.0)
   - ObjectMapper (3.5.3)
   - PromisesObjC (1.2.12)
-  - RBS (0.5.12):
+  - RBS (1.0.1):
     - Alamofire (~> 5.2)
     - Firebase
     - Firebase/Auth
@@ -413,7 +413,7 @@ SPEC CHECKSUMS:
   nanopb: 59317e09cf1f1a0af72f12af412d54edf52603fc
   ObjectMapper: 97111c97e054a6ee25917662106689f0b4127b37
   PromisesObjC: 3113f7f76903778cf4a0586bd1ab89329a0b7b97
-  RBS: 57f9fd9eb71a0f208a020828cd1a8df83024e01e
+  RBS: 324a353238b936fa35968b6de1d0cf8478ca2213
   TrustKit: 073855e3adecd317417bda4ac9e9ac54a2e3b9f2
 
 PODFILE CHECKSUM: a773746bcd1ccf0ba940f443ec6be31c60050e73
