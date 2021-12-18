@@ -212,10 +212,10 @@ enum RBSKeychainKey {
 public enum RBSError : Error {
     case TokenError,
          cloudNotConfigured,
-         noCloudSnapFound,
          classIdRequired,
-         cantGetCloudObject,
-         methodReturnedError
+         cloudObjectNotFound,
+         methodReturnedError,
+         parsingError
 }
 
 extension String: LocalizedError {
@@ -516,8 +516,6 @@ public class RBS {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
                         }
                     }
-                } else {
-                    
                 }
                 
                 if firebaseApp == nil {
@@ -788,9 +786,7 @@ public class RBS {
     ) {
         
         guard let classId = options.classID else {
-            
             onError(RBSCloudObjectError(error: RBSError.classIdRequired, response: nil))
-            //            onError(RBSError.classIdRequired)
             return
         }
         
@@ -854,7 +850,7 @@ public class RBS {
             }
         } onError: { (error) in
             if let error = error as? BaseErrorResponse, let cloudObjectResponse = error.cloudObjectResponse {
-                onError(RBSCloudObjectError(error: .cantGetCloudObject, response: cloudObjectResponse))
+                onError(RBSCloudObjectError(error: .cloudObjectNotFound, response: cloudObjectResponse))
             }
         }
         
@@ -969,7 +965,12 @@ public class RBSCloudObject {
             headers: headers,
             cloudObjectOptions: options2
         ) { (response) in
-            onSuccess(response[0] as! RBSCloudObjectResponse)
+            if let objectResponse = response.first as? RBSCloudObjectResponse {
+                onSuccess(objectResponse)
+            } else {
+                let errorResponse = RBSCloudObjectResponse(statusCode: -1, headers: nil, body: response.first as? Data)
+                onError(RBSCloudObjectError(error: .parsingError, response: errorResponse))
+            }
         } onError: { (error) in
             if let error = error as? BaseErrorResponse, let cloudObjectResponse = error.cloudObjectResponse {
                 onError(RBSCloudObjectError(error: .methodReturnedError, response: cloudObjectResponse))
@@ -979,8 +980,8 @@ public class RBSCloudObject {
     
     public func getState(
         with options: RBSCloudObjectOptions,
-        onSuccess: @escaping (Data) -> Void,
-        onError: @escaping (Error) -> Void
+        onSuccess: @escaping (RBSCloudObjectResponse) -> Void,
+        onError: @escaping (RBSCloudObjectError) -> Void
     ) {
         
         guard let rbs = rbs else {
@@ -996,9 +997,16 @@ public class RBSCloudObject {
             headers: headers,
             cloudObjectOptions: options
         ) { (response) in
-            onSuccess(response[0] as! Data)
+            if let objectResponse = response.first as? RBSCloudObjectResponse {
+                onSuccess(objectResponse)
+            } else {
+                let errorResponse = RBSCloudObjectResponse(statusCode: -1, headers: nil, body: response.first as? Data)
+                onError(RBSCloudObjectError(error: .parsingError, response: errorResponse))
+            }
         } onError: { (error) in
-            onError(error)
+            if let error = error as? BaseErrorResponse, let cloudObjectResponse = error.cloudObjectResponse {
+                onError(RBSCloudObjectError(error: .methodReturnedError, response: cloudObjectResponse))
+            }
         }
     }
     
@@ -1029,7 +1037,7 @@ public class RBSCloudObjectState {
     }
     
     public func subscribe(
-        onSuccess: @escaping ([String: Any]) -> Void,
+        onSuccess: @escaping ([String: Any]?) -> Void,
         onError: @escaping (Error) -> Void
     ) {
         var path = "/projects/\(projectID)/classes/\(classID)/instances/\(instanceID)/"
@@ -1049,12 +1057,7 @@ public class RBSCloudObjectState {
                         return
                     }
                     
-                    guard let dataSnap = snap?.data() else {
-                        onError(RBSError.noCloudSnapFound)
-                        return
-                    }
-                    
-                    onSuccess(dataSnap)
+                    onSuccess(snap?.data())
                 }
         case .role:
             path.append("roleState/\(userIdentity)")
@@ -1065,12 +1068,7 @@ public class RBSCloudObjectState {
                         return
                     }
                     
-                    guard let dataSnap = snap?.data() else {
-                        onError(RBSError.noCloudSnapFound)
-                        return
-                    }
-                    
-                    onSuccess(dataSnap)
+                    onSuccess(snap?.data())
                 }
         case .public:
             listener = database.document(path).addSnapshotListener { (snap, error) in
@@ -1079,12 +1077,7 @@ public class RBSCloudObjectState {
                     return
                 }
                 
-                guard let dataSnap = snap?.data() else {
-                    onError(RBSError.noCloudSnapFound)
-                    return
-                }
-                
-                onSuccess(dataSnap)
+                onSuccess(snap?.data())
             }
         }
     }
