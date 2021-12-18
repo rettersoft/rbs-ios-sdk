@@ -18,8 +18,6 @@ public struct RBSCloudObjectResponse {
     public let body: Data?
 }
 
-
-
 public struct RBSCloudObjectError: Error {
     
     public let error: RBSError
@@ -979,7 +977,7 @@ public class RBSCloudObject {
     }
     
     public func getState(
-        with options: RBSCloudObjectOptions,
+        with options: RBSCloudObjectOptions?,
         onSuccess: @escaping (RBSCloudObjectResponse) -> Void,
         onError: @escaping (RBSCloudObjectError) -> Void
     ) {
@@ -988,14 +986,16 @@ public class RBSCloudObject {
             return
         }
         
-        let parameters: [String: Any] = options.body?.compactMapValues( { $0 }) ?? [:]
-        let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
+        let coOptions = options == nil ? RBSCloudObjectOptions() : options!
+        
+        let parameters: [String: Any] = coOptions.body?.compactMapValues( { $0 }) ?? [:]
+        let headers = coOptions.headers?.compactMapValues( { $0 } ) ?? [:]
         
         rbs.send(
             action: "rbs.core.request.STATE",
             data: parameters,
             headers: headers,
-            cloudObjectOptions: options
+            cloudObjectOptions: coOptions
         ) { (response) in
             if let objectResponse = response.first as? RBSCloudObjectResponse {
                 onSuccess(objectResponse)
