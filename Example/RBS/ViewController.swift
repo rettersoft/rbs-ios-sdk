@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta, isLoggingEnabled: false))
     
     var cloudObject: RBSCloudObject?
     

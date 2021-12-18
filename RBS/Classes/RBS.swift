@@ -85,6 +85,16 @@ public struct RBSConfig {
     }
 }
 
+struct RBSLogger {
+    let isLoggingEnabled: Bool
+
+    func log(_ text: Any) {
+        if isLoggingEnabled {
+            print(text)
+        }
+    }
+}
+
 public struct RBSUser {
     public var uid:String
     public var isAnonymous:Bool
@@ -308,10 +318,13 @@ public class RBS {
     private var firebaseApp: FirebaseApp?
     fileprivate var db: Firestore?
     
+    private let logger: RBSLogger
+    
     public init(config:RBSConfig) {
+        self.logger = RBSLogger(isLoggingEnabled: config.isLoggingEnabled ?? false)
         if let sslPinningEnabled = config.sslPinningEnabled, sslPinningEnabled == false {
             // Dont enable ssl pinning
-            print("WARNING! RBS SSL Pinning disabled.")
+            logger.log("WARNING! RBS SSL Pinning disabled.")
         } else {
             self.setupTrustKit()
         }
@@ -377,7 +390,7 @@ public class RBS {
     
     private func getTokenData() throws -> RBSTokenData {
         
-        print("getTokenData called")
+        logger.log("getTokenData called")
         
         // Skip service tokens for now
         //        if let secretKey = self.config.secretKey, let serviceId = self.config.serviceId {
@@ -397,11 +410,11 @@ public class RBS {
                let projectId = tokenData.projectId {
                 
                 if(projectId == self.projectId) {
-                    print("refreshTokenExpiresAt \(refreshTokenExpiresAt)")
-                    print("accessTokenExpiresAt \(accessTokenExpiresAt)")
+                    logger.log("refreshTokenExpiresAt \(refreshTokenExpiresAt)")
+                    logger.log("accessTokenExpiresAt \(accessTokenExpiresAt)")
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
                         // Token can be used
-                        print("returning tokenData")
+                        logger.log("returning tokenData")
                         return tokenData
                     }
                     
@@ -442,7 +455,7 @@ public class RBS {
                     FirebaseApp.configure(name: "rbs", options: firebaseOptions)
                     
                     guard let app = FirebaseApp.app(name: "rbs") else {
-                        print("---FB Not Configured Yet")
+                        self.logger.log("---FB Not Configured Yet")
                         return
                     }
                     
@@ -452,7 +465,7 @@ public class RBS {
                 
                 if let app = self.firebaseApp {
                     Auth.auth(app: app).signIn(withCustomToken: fToken) { (resp, error) in
-                        print("-----", resp?.credential, resp?.additionalUserInfo, error)
+                        self.logger.log("----- \(resp?.additionalUserInfo), \(error)")
                     }
                 }
                 
@@ -463,7 +476,7 @@ public class RBS {
     
     
     private func saveTokenData(tokenData:RBSTokenData?) {
-        print("saveTokenData called")
+        logger.log("saveTokenData called")
         var storedUserId:String? = nil
         // First get last stored token data from keychain.
         if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
@@ -531,7 +544,7 @@ public class RBS {
     
     
     private func getAnonymToken() throws -> RBSTokenData {
-        print("getAnonymToken called")
+        logger.log("getAnonymToken called")
         let getAnonymTokenRequest = GetAnonymTokenRequest()
         getAnonymTokenRequest.projectId = self.config.projectId
         var retVal:RBSTokenData? = nil
@@ -557,7 +570,7 @@ public class RBS {
     }
     
     private func refreshToken(tokenData:RBSTokenData) throws -> RBSTokenData {
-        print("refreshToken called")
+        logger.log("refreshToken called")
         let refreshTokenRequest = RefreshTokenRequest()
         refreshTokenRequest.refreshToken = tokenData.refreshToken
         var retVal:RBSTokenData? = nil
@@ -591,7 +604,7 @@ public class RBS {
         headers:[String:String]?,
         cloudObjectOptions: RBSCloudObjectOptions? = nil
     ) throws -> [Any] {
-        print("executeAction called")
+        logger.log("executeAction called")
         let req = ExecuteActionRequest()
         req.projectId = self.projectId
         req.accessToken = tokenData.accessToken
@@ -654,7 +667,7 @@ public class RBS {
                 }
                 break
             case .failure(let f):
-                print(f)
+                self.logger.log(f)
                 break
             }
             semaphoreLocal.signal()
@@ -678,7 +691,7 @@ public class RBS {
     
     public func authenticateWithCustomToken(_ customToken:String) {
         
-        print("authenticateWithCustomToken called")
+        logger.log("authenticateWithCustomToken called")
         DispatchQueue.global().async {
             
             
@@ -867,11 +880,11 @@ public class RBS {
                      onSuccess: @escaping (_ result:[Any]) -> Void,
                      onError: @escaping (_ error:Error) -> Void) {
         
-        print("send called")
+        logger.log("send called")
         
         serialQueue.async {
             
-            print("send called in async block")
+            self.logger.log("send called in async block")
             
             do {
                 
