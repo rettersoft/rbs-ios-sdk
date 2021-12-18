@@ -63,6 +63,7 @@ public struct RBSConfig {
     var serviceId:String?
     var region: RbsRegion?
     var sslPinningEnabled: Bool?
+    var isLoggingEnabled: Bool?
     
     public init(
         projectId: String,
@@ -70,7 +71,8 @@ public struct RBSConfig {
         developerId: String? = nil,
         serviceId: String? = nil,
         region: RbsRegion? = nil,
-        sslPinningEnabled:Bool? = nil
+        sslPinningEnabled:Bool? = nil,
+        isLoggingEnabled: Bool? = nil
     ) {
         
         self.projectId = projectId
@@ -79,6 +81,7 @@ public struct RBSConfig {
         self.serviceId = serviceId
         self.region = region == nil ? .euWest1 : region
         self.sslPinningEnabled = sslPinningEnabled
+        self.isLoggingEnabled = isLoggingEnabled
     }
 }
 
@@ -126,6 +129,8 @@ struct RBSTokenData : Mappable, Decodable {
         accessToken <- map["accessToken"]
         refreshToken <- map["refreshToken"]
     }
+    
+    
 }
 
 
@@ -632,20 +637,20 @@ public class RBS {
                     
                 } else {
                     
-                    if cloudObjectOptions != nil {
-                        
-                        errorResponse = try? response.map(BaseErrorResponse.self)
+                    errorResponse = try? response.map(BaseErrorResponse.self)
+                    errorResponse?.httpStatusCode = response.statusCode
+                    
+                    errorResponse?.cloudObjectResponse = cloudObjectOptions != nil ? RBSCloudObjectResponse(statusCode: response.statusCode,
+                        headers: response.response?.headers.dictionary,
+                        body: response.data) : nil
+                    
+                    if errorResponse == nil {
+                        errorResponse = BaseErrorResponse()
                         errorResponse?.httpStatusCode = response.statusCode
-                        errorResponse?.cloudObjectResponse = RBSCloudObjectResponse(statusCode: response.statusCode,
+                        errorResponse?.cloudObjectResponse = cloudObjectOptions != nil ? RBSCloudObjectResponse(statusCode: response.statusCode,
                                                                                     headers: response.response?.headers.dictionary,
-                                                                                    body: response.data)
-                        
-                    } else {
-                        errorResponse = try? response.map(BaseErrorResponse.self)
-                        errorResponse?.httpStatusCode = response.statusCode
+                                                                                    body: response.data) : nil
                     }
-                    
-                    
                 }
                 break
             case .failure(let f):
@@ -986,7 +991,9 @@ public class RBSCloudObject {
             return
         }
         
-        let coOptions = options == nil ? RBSCloudObjectOptions() : options!
+        var coOptions = options == nil ? RBSCloudObjectOptions() : options!
+        coOptions.classID = self.classID
+        coOptions.instanceID = self.instanceID
         
         let parameters: [String: Any] = coOptions.body?.compactMapValues( { $0 }) ?? [:]
         let headers = coOptions.headers?.compactMapValues( { $0 } ) ?? [:]
