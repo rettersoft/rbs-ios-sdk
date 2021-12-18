@@ -18,6 +18,19 @@ public struct RBSCloudObjectResponse {
     public let body: Data?
 }
 
+
+
+public struct RBSCloudObjectError: Error {
+    
+    public let error: RBSError
+    public let response: RBSCloudObjectResponse?
+    
+    //    public let statusCode: Int
+    //    public let headers: [String:String]?
+    //    public let body: Data?
+}
+
+
 public enum RbsRegion {
     case euWest1, euWest1Beta
     
@@ -196,11 +209,13 @@ enum RBSKeychainKey {
     }
 }
 
-enum RBSError : Error {
+public enum RBSError : Error {
     case TokenError,
          cloudNotConfigured,
          noCloudSnapFound,
-         classIdRequired
+         classIdRequired,
+         cantGetCloudObject,
+         methodReturnedError
 }
 
 extension String: LocalizedError {
@@ -628,7 +643,7 @@ public class RBS {
                         errorResponse?.cloudObjectResponse = RBSCloudObjectResponse(statusCode: response.statusCode,
                                                                                     headers: response.response?.headers.dictionary,
                                                                                     body: response.data)
-                                                
+                        
                     } else {
                         errorResponse = try? response.map(BaseErrorResponse.self)
                         errorResponse?.httpStatusCode = response.statusCode
@@ -769,11 +784,13 @@ public class RBS {
     public func getCloudObject(
         with options: RBSCloudObjectOptions,
         onSuccess: @escaping (RBSCloudObject) -> Void,
-        onError: @escaping (Error) -> Void
+        onError: @escaping (RBSCloudObjectError) -> Void
     ) {
         
         guard let classId = options.classID else {
-            onError(RBSError.classIdRequired)
+            
+            onError(RBSCloudObjectError(error: RBSError.classIdRequired, response: nil))
+            //            onError(RBSError.classIdRequired)
             return
         }
         
@@ -836,7 +853,9 @@ public class RBS {
                 }
             }
         } onError: { (error) in
-            onError(error)
+            if let error = error as? BaseErrorResponse, let cloudObjectResponse = error.cloudObjectResponse {
+                onError(RBSCloudObjectError(error: .cantGetCloudObject, response: cloudObjectResponse))
+            }
         }
         
     }
@@ -930,7 +949,7 @@ public class RBSCloudObject {
     public func call(
         with options: RBSCloudObjectOptions,
         onSuccess: @escaping (RBSCloudObjectResponse) -> Void,
-        onError: @escaping (RBSCloudObjectResponse) -> Void
+        onError: @escaping (RBSCloudObjectError) -> Void
     ) {
         
         var options2 = options
@@ -952,7 +971,9 @@ public class RBSCloudObject {
         ) { (response) in
             onSuccess(response[0] as! RBSCloudObjectResponse)
         } onError: { (error) in
-            onError((error as! BaseErrorResponse).cloudObjectResponse!)
+            if let error = error as? BaseErrorResponse, let cloudObjectResponse = error.cloudObjectResponse {
+                onError(RBSCloudObjectError(error: .methodReturnedError, response: cloudObjectResponse))
+            }
         }
     }
     

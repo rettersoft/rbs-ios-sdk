@@ -110,8 +110,8 @@ class ViewController: UIViewController {
         } onError: { (error) in
             print("---Method Error ->", error)
             
-            let json = try? JSONSerialization.jsonObject(with: error.body!, options: [])
-            print(json)
+//            let json = try? JSONSerialization.jsonObject(with: error.body!, options: [])
+//            print(json)
         }
         
         // MARK: - Get State via REST
