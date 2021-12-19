@@ -37,10 +37,6 @@ enum RBSService {
                     return "CALL/\(request.classID ?? "")/\(request.method ?? "")/\(request.instanceID ?? "")"
                 }
                 
-                if request.actionName == "rbs.core.request.STATE" {
-                    return "STATE/\(request.classID ?? "")/\(request.instanceID ?? "")"
-                }
-                
                 if let instanceID = request.instanceID {
                     return "/INSTANCE/\(request.classID ?? "")/\(instanceID)"
                 } else if let keyValue = request.keyValue {
