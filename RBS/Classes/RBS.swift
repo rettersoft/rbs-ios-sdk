@@ -360,7 +360,9 @@ public class RBS {
         guard let tokenData = tokenData else {
             
             if storedUserId != nil {
-                self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+                DispatchQueue.main.async {
+                    self.delegate?.rbsClient(client: self, authStatusChanged: .signedOut)
+                }
             }
             
             self.keychain.delete(RBSKeychainKey.token.keyName)
