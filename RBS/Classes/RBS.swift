@@ -391,12 +391,13 @@ public class RBS {
                     initFirebaseApp(tokenData: tokenData)
                     
                     if anonymous {
-                        DispatchQueue.main.async {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
                         }
                         
+                        
                     } else {
-                        DispatchQueue.main.async {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
                         }
                     }
