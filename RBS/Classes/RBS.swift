@@ -72,7 +72,7 @@ public struct RBSConfig {
         serviceId: String? = nil,
         region: RbsRegion? = nil,
         sslPinningEnabled:Bool? = nil,
-        isLoggingEnabled: Bool? = nil
+        isLoggingEnabled: Bool = false
     ) {
         
         self.projectId = projectId
@@ -980,42 +980,6 @@ public class RBSCloudObject {
             data: parameters,
             headers: headers,
             cloudObjectOptions: options2
-        ) { (response) in
-            if let objectResponse = response.first as? RBSCloudObjectResponse {
-                onSuccess(objectResponse)
-            } else {
-                let errorResponse = RBSCloudObjectResponse(statusCode: -1, headers: nil, body: response.first as? Data)
-                onError(RBSCloudObjectError(error: .parsingError, response: errorResponse))
-            }
-        } onError: { (error) in
-            if let error = error as? BaseErrorResponse, let cloudObjectResponse = error.cloudObjectResponse {
-                onError(RBSCloudObjectError(error: .methodReturnedError, response: cloudObjectResponse))
-            }
-        }
-    }
-    
-    public func getState(
-        with options: RBSCloudObjectOptions?,
-        onSuccess: @escaping (RBSCloudObjectResponse) -> Void,
-        onError: @escaping (RBSCloudObjectError) -> Void
-    ) {
-        
-        guard let rbs = rbs else {
-            return
-        }
-        
-        var coOptions = options == nil ? RBSCloudObjectOptions() : options!
-        coOptions.classID = self.classID
-        coOptions.instanceID = self.instanceID
-        
-        let parameters: [String: Any] = coOptions.body?.compactMapValues( { $0 }) ?? [:]
-        let headers = coOptions.headers?.compactMapValues( { $0 } ) ?? [:]
-        
-        rbs.send(
-            action: "rbs.core.request.STATE",
-            data: parameters,
-            headers: headers,
-            cloudObjectOptions: coOptions
         ) { (response) in
             if let objectResponse = response.first as? RBSCloudObjectResponse {
                 onSuccess(objectResponse)

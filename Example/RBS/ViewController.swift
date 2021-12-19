@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta, isLoggingEnabled: false))
+    let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta))
     
     var cloudObject: RBSCloudObject?
     
@@ -113,20 +113,6 @@ class ViewController: UIViewController {
 //            let json = try? JSONSerialization.jsonObject(with: error.body!, options: [])
 //            print(json)
         }
-        
-        // MARK: - Get State via REST
-        
-        //            object.getState(
-        //                with: cloudItem
-        //            ) { (response) in
-        //                if let firstResponse = response.first,
-        //                   let data = firstResponse as? Data {
-        //                    let json = try? JSONSerialization.jsonObject(with: data, options: [])
-        //                    print("---GETSTATE Response ->", json)
-        //                }
-        //            } errorFired: { (error) in
-        //                print("---GETSTATE Error ->", error)
-        //            }
     }
     
     private func showCloudAlert() {

@@ -13,7 +13,7 @@ import ObjectMapper
 
 var globalRbsRegion:RbsRegion = .euWest1
 
-let cloudObjectActions = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL", "rbs.core.request.STATE"]
+let cloudObjectActions = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL"]
 
 enum RBSService {
     
