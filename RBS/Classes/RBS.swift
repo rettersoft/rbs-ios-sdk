@@ -9,7 +9,6 @@ import TrustKit
 import FirebaseCore
 import FirebaseFirestore
 import FirebaseAuth
-import GTMSessionFetcher
 
 public enum RbsRegion {
     case euWest1, euWest1Beta
@@ -261,8 +260,6 @@ public class RBS {
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
-        
-        GTMSessionFetcherService.swizzleDelegateDispatcherForFetcher()
     }
     
     private var safeNow: Date {
@@ -288,7 +285,7 @@ public class RBS {
             ]
         ]
         let trustKitConfig = [
-            kTSKSwizzleNetworkDelegates: true,
+            kTSKSwizzleNetworkDelegates: false,
             kTSKPinnedDomains: [
                 "core.rtbs.io": pinningConfig,
                 "core-test.rettermobile.com": pinningConfig,
