@@ -120,6 +120,7 @@ struct RBSTokenData : Mappable, Decodable {
         uid <- map["uid"]
         accessToken <- map["accessToken"]
         refreshToken <- map["refreshToken"]
+        firebaseToken <- map["firebaseToken"]
     }
 }
 
@@ -157,7 +158,8 @@ public enum RBSError: Error {
          classIdRequired,
          cloudObjectNotFound,
          methodReturnedError,
-         parsingError
+         parsingError,
+         firebaseInitError
 }
 
 extension String: LocalizedError {
@@ -181,6 +183,7 @@ public class RBS {
     let serialQueue = DispatchQueue(label: "com.queue.Serial")
     
     let semaphore = DispatchSemaphore(value: 0)
+    let firebaseAuthSemaphore = DispatchSemaphore(value: 0)
     
     private var cloudObjects: [RBSCloudObject] = []
     
@@ -258,6 +261,21 @@ public class RBS {
             self.setupTrustKit()
         }
         
+        
+        let firebaseOptions = FirebaseOptions(googleAppID: "1:814752823492:ios:6429462157e997a146f191",
+                                              gcmSenderID: "814752823492")
+        firebaseOptions.projectID = "rtbs-c82e1"
+        firebaseOptions.apiKey = "AIzaSyCYKQHVjql92jRX350a7dEaxQUhgkSxiUE"
+        
+        FirebaseApp.configure(name: "rbs", options: firebaseOptions)
+        
+        guard let app = FirebaseApp.app(name: "rbs") else {
+            fatalError()
+        }
+        
+        self.firebaseApp = app
+        self.db = Firestore.firestore(app: app)
+        
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
@@ -323,12 +341,12 @@ public class RBS {
                     logger.log("accessTokenExpiresAt \(accessTokenExpiresAt)")
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
                         // Token can be used
-                        logger.log("returning tokenData")
+                        logger.log("DEBUG111 returning tokenData")
                         return tokenData
                     }
                     
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt < now {
-                        
+                        logger.log("DEBUG111 refreshing token")
                         // DO REFRESH
                         let refreshTokenRequest = RefreshTokenRequest()
                         refreshTokenRequest.refreshToken = refreshToken
@@ -344,7 +362,7 @@ public class RBS {
     }
     
     private func saveTokenData(tokenData: RBSTokenData?) {
-        logger.log("saveTokenData called")
+        logger.log("DEBUG111 saveTokenData called with tokenData")
         var storedUserId: String? = nil
         // First get last stored token data from keychain.
         if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
@@ -374,11 +392,14 @@ public class RBS {
         let data = try! JSONSerialization.data(withJSONObject: obj, options: .prettyPrinted)
         self.keychain.set(data, forKey: RBSKeychainKey.token.keyName)
         
+        logger.log("DEBUG111 saveTokenData 2")
+        
         if let accessToken = tokenData.accessToken {
             let jwt = try! decode(jwt: accessToken)
             if let userId = jwt.claim(name: "userId").string, let anonymous = jwt.claim(name: "anonymous").rawValue as? Bool {
                 
                 if userId != storedUserId {
+                    logger.log("DEBUG111 userId \(userId) - stored: \(storedUserId)")
                     // User has changed.
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
                     
@@ -388,62 +409,28 @@ public class RBS {
                     
                     cloudObjects.removeAll()
                     
-                    initFirebaseApp(tokenData: tokenData)
-                    
-                    if anonymous {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
+                    logger.log("DEBUG111 initFirebaseApp 1")
+                    if let app = self.firebaseApp, let customToken = tokenData.firebase?.customToken {
+                        self.logger.log("DEBUG111 FIREBASE custom auth \(userId)")
+                       
+                        Auth.auth(app: app).signIn(withCustomToken: customToken) { [weak self] (resp, error)  in
+                            self?.logger.log("DEBUG111 FIREBASE custom auth COMPLETE user: \(resp?.user)")
+                            self?.firebaseAuthSemaphore.signal()
                         }
                         
-                        
-                    } else {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        _ = self.firebaseAuthSemaphore.wait(wallTimeout: .distantFuture)
+                    }
+                    
+                    DispatchQueue.main.async {
+                        if anonymous {
+                            self.delegate?.rbsClient(client: self, authStatusChanged: .signedInAnonymously(user: user))
+                        } else {
                             self.delegate?.rbsClient(client: self, authStatusChanged: .signedIn(user: user))
                         }
                     }
-                }
-                
-                if firebaseApp == nil {
-                    initFirebaseApp(tokenData: tokenData)
-                }
-            }
-        }
-    }
-    
-    private func initFirebaseApp(tokenData: RBSTokenData) {
-        if let firebaseToken = tokenData.firebase?.customToken,
-           let apiKey = tokenData.firebase?.apiKey,
-           let projectID = tokenData.firebase?.projectId {
-            
-            let fToken = firebaseToken
-            
-            let firebaseOptions = FirebaseOptions(
-                googleAppID: "1:814752823492:ios:f2d97584d969c4d846f191",
-                gcmSenderID: "814752823492"
-            )
-            
-            firebaseOptions.projectID = projectID
-            firebaseOptions.apiKey = apiKey
-            
-            DispatchQueue.main.async {
-                
-                if self.firebaseApp == nil {
-                    FirebaseApp.configure(name: "rbs", options: firebaseOptions)
                     
-                    guard let app = FirebaseApp.app(name: "rbs") else {
-                        self.logger.log("---FB Not Configured Yet")
-                        return
-                    }
-                    
-                    self.firebaseApp = app
-                    self.db = Firestore.firestore(app: app)
                 }
                 
-                if let app = self.firebaseApp {
-                    Auth.auth(app: app).signIn(withCustomToken: fToken) { (resp, error) in
-                        self.logger.log("----- \(resp?.additionalUserInfo.debugDescription ?? ""), \(String(describing: error))")
-                    }
-                }
                 
             }
         }
@@ -597,7 +584,8 @@ public class RBS {
     
     public func authenticateWithCustomToken(_ customToken: String) {
         logger.log("authenticateWithCustomToken called")
-        DispatchQueue.global().async {
+        serialQueue.async {
+            
             self.saveTokenData(tokenData: nil)
             let req = AuthWithCustomTokenRequest()
             req.customToken = customToken
@@ -608,7 +596,9 @@ public class RBS {
                     var tokenData = try! response.map(RBSTokenData.self)
                     tokenData.projectId = self?.config.projectId
                     tokenData.isAnonym = false
-                    self?.saveTokenData(tokenData: tokenData)
+                    self?.serialQueue.async {
+                        self?.saveTokenData(tokenData: tokenData)
+                    }
                     break
                 default:
                     break
@@ -616,6 +606,7 @@ public class RBS {
                 self?.semaphore.signal()
             }
             _ = self.semaphore.wait(wallTimeout: .distantFuture)
+            
         }
     }
     
@@ -707,11 +698,13 @@ public class RBS {
         logger.log("send called")
         
         serialQueue.async {
-            self.logger.log("send called in async block")
+            self.logger.log("DEBUG111 send called in async block")
             do {
                 
+                self.logger.log("DEBUG111 getTokenData called in send")
                 let tokenData = try self.getTokenData()
                 
+                self.logger.log("DEBUG111 saveTokenData called in send")
                 self.saveTokenData(tokenData: tokenData)
                 
                 DispatchQueue.global().async {
@@ -726,6 +719,7 @@ public class RBS {
                         )
                         
                         DispatchQueue.main.async {
+                            self.logger.log("DEBUG111 send onSuccess")
                             onSuccess(actionResult)
                         }
                     } catch {
@@ -776,8 +770,8 @@ public class RBS {
             guard let firstResponse = response.first as? RBSCloudObjectResponse,
                   let data = firstResponse.body,
                   let cloudResponse = try? JSONDecoder().decode(RBSCloudObjectInstanceResponse.self, from: data) else {
-                return
-            }
+                      return
+                  }
             
             if let respInstanceId = cloudResponse.instanceId {
                 
@@ -1027,9 +1021,10 @@ struct RBSCloudObjectMethod: Decodable {
 }
 
 struct CloudOption: Decodable {
-    let customToken: String?
-    let projectId: String?
-    let apiKey: String?
+    var customToken: String?
+    var projectId: String?
+    var apiKey: String?
+
 }
 
 
