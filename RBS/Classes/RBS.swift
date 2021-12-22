@@ -527,13 +527,10 @@ public class RBS {
                                                          headers: response.response?.headers.dictionary,
                                                          body: response.data)]
                     } else {
-                        
                         if let json = try? JSONSerialization.jsonObject(with: response.data, options: []) as? [Any] {
                             retVal = json
-                        }
-                        
-                        if let _ = try? JSONSerialization.jsonObject(with: response.data, options: []) {
-                            retVal = [response.data]
+                        } else if let json = try? JSONSerialization.jsonObject(with: response.data, options: []) {
+                            retVal = [json]
                         }
                         
                         if retVal == nil {
