@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "6eedd7ca16be4ae8982451fdfdba7e15", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "69ec1ef0039b4332b3e102f082a98ec2", region: .euWest1Beta))
     
     var cloudObject: RBSCloudObject?
     
@@ -42,8 +42,8 @@ class ViewController: UIViewController {
     
     @IBAction func searchProducts(_ sender: Any) {
         // MARK: - Get Cloud Object
-        //        let cloudOpts = RBSCloudObjectOptions(classID: "ChatRoom", instanceID: "01FPJX38KE3G8HBQ49VMF2KC3C")
-        let cloudOpts = RBSCloudObjectOptions(classID: "User", keyValue: ("username", "loodos2"))
+        let cloudOpts = RBSCloudObjectOptions(classID: "TestClass", instanceID: "01FQXSX0S23GQA59ZS45H66YGC", useLocal: true)
+//        let cloudOpts = RBSCloudObjectOptions(classID: "User", keyValue: ("username", "loodos2"))
         
         rbs.getCloudObject(with: cloudOpts) { [weak self] (newObject) in
             print("--- Cloud Object Created ---")
@@ -63,19 +63,19 @@ class ViewController: UIViewController {
         
         
         
-        object.state.user.subscribe { (data) in
+        object.state?.user.subscribe { (data) in
             print("---User State ->", data)
         } onError: { (error) in
             print("---User State Error ->", error)
         }
         
-        object.state.role.subscribe { (data) in
+        object.state?.role.subscribe { (data) in
             print("---RoleState State ->", data)
         } onError: { (error) in
             print("---Role State Error ->", error)
         }
         
-        object.state.public.subscribe { (data) in
+        object.state?.public.subscribe { (data) in
             print("---Public State ->", data)
         } onError: { (error) in
             print("---Public State Error ->", error)
@@ -91,7 +91,7 @@ class ViewController: UIViewController {
         // MARK: - Call Method
         
         object.call(
-            with: RBSCloudObjectOptions(method: "signin2", body: ["password": "1231232"])
+            with: RBSCloudObjectOptions(method: "sayHello")
         ) { (methodResponse) in
             
             let json = try? JSONSerialization.jsonObject(with: methodResponse.body!, options: [])

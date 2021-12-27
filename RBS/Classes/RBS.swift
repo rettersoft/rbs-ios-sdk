@@ -401,7 +401,7 @@ public class RBS {
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
                     
                     cloudObjects.forEach { object in
-                        object.state.removeListeners()
+                        object.state?.removeListeners()
                     }
                     
                     cloudObjects.removeAll()
@@ -604,11 +604,19 @@ public class RBS {
         }
     }
     
+    public func signInAnonymously() {
+        send(
+            action: "signInAnonym",
+            data: [:],
+            headers: nil) { _ in }
+            onError: { _ in }
+    }
+    
     public func signOut() {
         self.saveTokenData(tokenData: nil)
         do {
             cloudObjects.forEach { object in
-                object.state.removeListeners()
+                object.state?.removeListeners()
             }
             cloudObjects.removeAll()
             
@@ -621,7 +629,7 @@ public class RBS {
     
     public func removeAllCloudObjects() { // ONLY FOR TEST PURPOSES
         cloudObjects.forEach { object in
-            object.state.removeListeners()
+            object.state?.removeListeners()
         }
         cloudObjects.removeAll()
     }
@@ -701,6 +709,11 @@ public class RBS {
                 self.logger.log("DEBUG111 saveTokenData called in send")
                 self.saveTokenData(tokenData: tokenData)
                 
+                if actionName == "signInAnonym" {
+                    onSuccess([])
+                    return
+                }
+                
                 DispatchQueue.global().async {
                     do {
                         let actionResult = try self.executeAction(
@@ -750,6 +763,19 @@ public class RBS {
         
         let parameters: [String: Any] = options.body?.compactMapValues( { $0 }) ?? [:]
         let headers = options.headers?.compactMapValues( { $0 } ) ?? [:]
+        
+        if (options.useLocal ?? false) && options.instanceID != nil {
+            onSuccess(RBSCloudObject(
+                projectID: self.projectId,
+                classID: classId,
+                instanceID: options.instanceID!,
+                userID: "",
+                userIdentity: "",
+                rbs: self,
+                isLocal: true
+            ))
+            return
+        }
         
         send(
             action: "rbs.core.request.INSTANCE",
@@ -829,9 +855,10 @@ public class RBSCloudObject {
     private let userIdentity: String
     private weak var db: Firestore?
     private weak var rbs: RBS?
-    public let state: State
+    public let state: State?
+    private let isLocal: Bool
     
-    init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, rbs: RBS?) {
+    init(projectID: String, classID: String, instanceID: String, userID: String, userIdentity: String, rbs: RBS?, isLocal: Bool = false) {
         self.projectID = projectID
         self.classID = classID
         self.instanceID = instanceID
@@ -839,12 +866,17 @@ public class RBSCloudObject {
         self.userIdentity = userIdentity
         self.rbs = rbs
         self.db = rbs?.db
+        self.isLocal = isLocal
         
-        state = State(
-            user: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .user, db: db),
-            role: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .role, db: db),
-            public: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .public, db: db)
-        )
+        if !isLocal {
+            state = State(
+                user: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .user, db: db),
+                role: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .role, db: db),
+                public: RBSCloudObjectState(projectID: projectID, classID: classID, instanceID: instanceID, userID: userID, userIdentity: userIdentity, state: .public, db: db)
+            )
+        } else {
+            state = nil
+        }
     }
     
     public func call(
@@ -884,7 +916,7 @@ public class RBSCloudObject {
     }
     
     public func unsubscribeStates() {
-        state.removeListeners()
+        state?.removeListeners()
     }
 }
 
@@ -979,6 +1011,7 @@ public struct RBSCloudObjectOptions {
     public var queryString: [String: String]?
     public var httpMethod: Moya.Method?
     public var body: [String: Any]?
+    public var useLocal: Bool?
     
     public init(
         classID: String? = nil,
@@ -988,7 +1021,8 @@ public struct RBSCloudObjectOptions {
         headers: [String: String]? = nil,
         queryString: [String: String]? = nil,
         httpMethod: Moya.Method? = nil,
-        body: [String: Any]? = nil
+        body: [String: Any]? = nil,
+        useLocal: Bool? = nil
     ) {
         self.classID = classID
         self.instanceID = instanceID
@@ -998,6 +1032,7 @@ public struct RBSCloudObjectOptions {
         self.queryString = queryString
         self.httpMethod = httpMethod
         self.body = body
+        self.useLocal = useLocal
     }
 }
 
@@ -1022,7 +1057,7 @@ struct CloudOption: Decodable {
 }
 
 
-public struct RBSCloudObjectResponse {
+public struct RBSCloudObjectResponse: Codable {
     public let statusCode: Int
     public let headers: [String:String]?
     public let body: Data?
