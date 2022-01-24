@@ -33,8 +33,8 @@ TODO: Add long description of the pod here.
 
   s.source_files = 'RBS/Classes/**/*'
   
-  s.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
-  s.pod_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
+  #s.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
+  #s.pod_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
   
   # s.resource_bundles = {
   #   'RBS' => ['RBS/Assets/*.png']
@@ -50,9 +50,9 @@ TODO: Add long description of the pod here.
   s.dependency 'KeychainSwift', '~> 19.0'
   s.dependency 'JWTDecode', '~> 2.4'
   s.dependency 'TrustKit'
-  s.dependency 'Firebase'
-  s.dependency 'Firebase/Firestore'
-  s.dependency 'FirebaseFirestoreSwift'
-  s.dependency 'Firebase/Auth'
+  s.dependency 'Firebase', '~> 8.11.0'
+  s.dependency 'Firebase/Firestore', '~> 8.11.0'
+  s.dependency 'FirebaseFirestoreSwift', '~> 8.11.0'
+  s.dependency 'Firebase/Auth', '~> 8.11.0'
   
 end
