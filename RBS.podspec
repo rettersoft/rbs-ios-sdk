@@ -52,7 +52,6 @@ TODO: Add long description of the pod here.
   s.dependency 'TrustKit'
   s.dependency 'Firebase', '~> 8.11.0'
   s.dependency 'Firebase/Firestore', '~> 8.11.0'
-  s.dependency 'FirebaseFirestoreSwift', '~> 8.11.0'
   s.dependency 'Firebase/Auth', '~> 8.11.0'
   
 end
