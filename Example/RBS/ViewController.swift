@@ -11,7 +11,7 @@ import RBS
 
 class ViewController: UIViewController {
     
-    let rbs = RBS(config: RBSConfig(projectId: "69ec1ef0039b4332b3e102f082a98ec2", region: .euWest1Beta))
+    let rbs = RBS(config: RBSConfig(projectId: "11c5e84qtq", region: .euWest1, isLoggingEnabled: true)) // "11c5e84qtq"
     
     var cloudObject: RBSCloudObject?
     
@@ -42,7 +42,7 @@ class ViewController: UIViewController {
     
     @IBAction func searchProducts(_ sender: Any) {
         // MARK: - Get Cloud Object
-        let cloudOpts = RBSCloudObjectOptions(classID: "TestClass", instanceID: "01FQXSX0S23GQA59ZS45H66YGC", useLocal: true)
+        let cloudOpts = RBSCloudObjectOptions(classID: "Semih")
 //        let cloudOpts = RBSCloudObjectOptions(classID: "User", keyValue: ("username", "loodos2"))
         
         rbs.getCloudObject(with: cloudOpts) { [weak self] (newObject) in
@@ -91,11 +91,18 @@ class ViewController: UIViewController {
         // MARK: - Call Method
         
         object.call(
-            with: RBSCloudObjectOptions(method: "sayHello")
+            with: RBSCloudObjectOptions(method: "test")
         ) { (methodResponse) in
             
             let json = try? JSONSerialization.jsonObject(with: methodResponse.body!, options: [])
             print(json)
+            
+            let decoder = JSONDecoder()
+            guard let testResponse = try? decoder.decode(TestResponse.self, from: methodResponse.body!) else {
+                return
+            }
+            
+            self.rbs.authenticateWithCustomToken(testResponse.customToken ?? "")
 //
 //            object.call(with: RBSCloudObjectOptions(method: "updateProfile", body: ["username": "loodos2"])) { (responseX) in
 //                if let firstResponseX = responseX.first,
@@ -139,4 +146,8 @@ extension ViewController : RBSClientDelegate {
         
         print("RBS authStatusChanged to \(toStatus)")
     }
+}
+
+struct TestResponse: Decodable {
+    let customToken: String?
 }

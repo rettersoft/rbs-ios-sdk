@@ -22,12 +22,13 @@ enum RBSService {
     
     case refreshToken(request: RefreshTokenRequest)
     case authWithCustomToken(request: AuthWithCustomTokenRequest)
+    case signout(request: SignOutRequest)
     
     var endPoint: String {
         switch self {
-        case .getAnonymToken(_): return "/public/anonymous-auth"
+        case .getAnonymToken(let request):
+            return "/INSTANCE/ProjectUser"
         case .executeAction(let request):
-
             let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
             
             if !isExcludedAction {
@@ -46,8 +47,12 @@ enum RBSService {
                 }
                 
             }
-        case .refreshToken(_): return "/public/auth-refresh"
-        case .authWithCustomToken(_): return "/public/auth"
+        case .refreshToken(let request):
+            return "/CALL/ProjectUser/refreshToken/\(request.projectId ?? "")_\(request.userId ?? "")"
+        case .authWithCustomToken(let request):
+            return "/CALL/ProjectUser/authWithCustomToken/\(request.projectId ?? "")_\(request.userId ?? "")"
+        case .signout(let request):
+            return "/CALL/ProjectUser/signOut/\(request.projectId ?? "")_\(request.userId ?? "")"
         }
     }
     
@@ -71,12 +76,13 @@ enum RBSService {
     var urlParameters: [String: Any] {
         switch self {
         case .getAnonymToken(let request):
-            return [
-                "projectId": request.projectId!,
-                "platform": "IOS"
-            ]
-        case .refreshToken(let request): return ["refreshToken":request.refreshToken!, "platform": "IOS"]
-        case .authWithCustomToken(let request): return ["customToken": request.customToken!, "platform": "IOS"]
+            return ["projectId": request.projectId ?? ""]
+        case .refreshToken(let request):
+            return ["refreshToken": request.refreshToken ?? ""]
+        case .authWithCustomToken(let request):
+            return ["customToken": request.customToken ?? ""]
+        case .signout(let request):
+            return ["accessToken": request.accessToken ?? ""]
             
         case .executeAction(let request):
             

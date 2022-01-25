@@ -10,14 +10,11 @@ import ObjectMapper
 import Moya
 
 class GetAnonymTokenRequest : Mappable {
-    
     var projectId: String?
     
     required init?(map: Map) { }
     
-    init() {
-    
-    }
+    init() { }
     
     func mapping(map: Map) {
         projectId <- map["projectId"]
@@ -25,32 +22,50 @@ class GetAnonymTokenRequest : Mappable {
 }
 
 class RefreshTokenRequest : Mappable {
-
+    var projectId: String?
     var refreshToken: String?
+    var userId: String?
     
     required init?(map: Map) { }
     
-    init() {
-    
-    }
+    init() { }
     
     func mapping(map: Map) {
+        projectId <- map["projectId"]
         refreshToken <- map["refreshToken"]
+        userId <- map["userId"]
     }
 }
 
 class AuthWithCustomTokenRequest : Mappable {
-
+    var projectId: String?
     var customToken: String?
+    var userId: String?
     
     required init?(map: Map) { }
     
-    init() {
-    
-    }
+    init() { }
     
     func mapping(map: Map) {
+        projectId <- map["projectId"]
         customToken <- map["customToken"]
+        userId <- map["userId"]
+    }
+}
+
+class SignOutRequest : Mappable {
+    var projectId: String?
+    var accessToken: String?
+    var userId: String?
+    
+    required init?(map: Map) { }
+    
+    init() { }
+    
+    func mapping(map: Map) {
+        projectId <- map["projectId"]
+        accessToken <- map["accessToken"]
+        userId <- map["userId"]
     }
 }
 

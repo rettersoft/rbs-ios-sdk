@@ -15,15 +15,16 @@ public enum RbsRegion {
     
     var getUrl:String {
         switch self {
-        case .euWest1: return "https://core.rtbs.io"
-        case .euWest1Beta: return "https://core-test.rtbs.io"
+        case .euWest1: return "https://root.api.rtbs.io"
+        case .euWest1Beta: return "https://root.test-api.rtbs.io"
         }
     }
     
+    
     var postUrl:String {
         switch self {
-        case .euWest1: return "https://core-internal.rtbs.io"
-        case .euWest1Beta: return "https://core-internal-beta.rtbs.io"
+        case .euWest1: return "https://root.api.rtbs.io"
+        case .euWest1Beta: return "https://root.test-api.rtbs.io"
         }
     }
     
@@ -81,7 +82,11 @@ public struct RBSUser {
     public var isAnonymous: Bool
 }
 
-struct RBSTokenData : Mappable, Decodable {
+struct RBSTokenResponse: Decodable {
+    var response: RBSTokenData
+}
+
+struct RBSTokenData: Mappable, Decodable {
     var projectId: String?
     var isAnonym: Bool?
     var uid: String?
@@ -106,6 +111,18 @@ struct RBSTokenData : Mappable, Decodable {
             let jwt = try! decode(jwt: token)
             return jwt.expiresAt
         }
+    }
+    
+    var userId: String? {
+        if let token = accessToken {
+            let jwt = try! decode(jwt: token)
+            guard let id = jwt.claim(name: "userId").string else {
+                return nil
+            }
+            
+            return id
+        }
+        return nil
     }
     
     
@@ -236,7 +253,11 @@ public class RBS {
                 }
                 return ""
             }
-            self._service = MoyaProvider<RBSService>(plugins: [ CachePolicyPlugin(), accessTokenPlugin ])
+            var plugins: [PluginType] = [CachePolicyPlugin(), accessTokenPlugin]
+            if config.isLoggingEnabled ?? false {
+                plugins.append(NetworkLoggerPlugin())
+            }
+            self._service = MoyaProvider<RBSService>(plugins: plugins)
             
             return self._service!
         }
@@ -444,8 +465,8 @@ public class RBS {
         self.service.request(.getAnonymToken(request: getAnonymTokenRequest)) { [weak self] result in
             switch result {
             case .success(let response):
-                retVal = try! response.map(RBSTokenData.self)
-                break
+                let resp = try! response.map(RBSTokenResponse.self)
+                retVal = resp.response
             default:
                 break
             }
@@ -467,6 +488,8 @@ public class RBS {
         
         let refreshTokenRequest = RefreshTokenRequest()
         refreshTokenRequest.refreshToken = tokenData.refreshToken
+        refreshTokenRequest.projectId = projectId
+        refreshTokenRequest.userId = tokenData.userId
         
         var retVal:RBSTokenData? = nil
         
@@ -584,6 +607,14 @@ public class RBS {
             let req = AuthWithCustomTokenRequest()
             req.customToken = customToken
             
+            let jwt = try! decode(jwt: customToken)
+            guard let id = jwt.claim(name: "userId").string else {
+                return
+            }
+            
+            req.userId = id
+            req.projectId = self.projectId
+            
             self.service.request(.authWithCustomToken(request: req)) { [weak self] result in
                 switch result {
                 case .success(let response):
@@ -613,6 +644,31 @@ public class RBS {
     }
     
     public func signOut() {
+        
+        if let data = self.keychain.getData(RBSKeychainKey.token.keyName),
+           let json = try? JSONSerialization.jsonObject(with: data, options: []) {
+            
+            if let tokenData = Mapper<RBSTokenData>().map(JSONObject: json),
+               let accessToken = tokenData.accessToken,
+               let userId = tokenData.userId {
+                
+                let req = SignOutRequest()
+                req.accessToken = accessToken
+                req.projectId = projectId
+                req.userId = userId
+                
+                self.service.request(.signout(request: req)) { result in
+                    switch result {
+                    case .success(_):
+                        break
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+        
+        
         self.saveTokenData(tokenData: nil)
         do {
             cloudObjects.forEach { object in
@@ -1053,7 +1109,12 @@ struct CloudOption: Decodable {
     var customToken: String?
     var projectId: String?
     var apiKey: String?
+    var envs: RBSFirebaseEnv?
+}
 
+struct RBSFirebaseEnv: Decodable {
+    var iosAppId: String?
+    var gcmSenderId: String?
 }
 
 
