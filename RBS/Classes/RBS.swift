@@ -71,7 +71,7 @@ struct RBSLogger {
     
     func log(_ text: Any) {
         if isLoggingEnabled {
-            print(text)
+            print("RBSDebug: \(text)")
         }
     }
 }
@@ -89,6 +89,7 @@ struct RBSTokenData : Mappable, Decodable {
     var refreshToken: String?
     var firebaseToken: String?
     var firebase: CloudOption?
+    var deltaTime: Double?
     
     var accessTokenExpiresAt: Date? {
         get {
@@ -120,6 +121,7 @@ struct RBSTokenData : Mappable, Decodable {
         accessToken <- map["accessToken"]
         refreshToken <- map["refreshToken"]
         firebaseToken <- map["firebaseToken"]
+        deltaTime <- map["deltaTime"]
     }
 }
 
@@ -251,6 +253,8 @@ public class RBS {
     
     private let logger: RBSLogger
     
+    private var deltaTime: TimeInterval = 0
+    
     public init(config: RBSConfig) {
         self.logger = RBSLogger(isLoggingEnabled: config.isLoggingEnabled ?? false)
         if let sslPinningEnabled = config.sslPinningEnabled, sslPinningEnabled == false {
@@ -282,7 +286,9 @@ public class RBS {
     
     private var safeNow: Date {
         get {
-            return Date(timeIntervalSinceNow: 30)
+            let r = Date(timeIntervalSinceNow: 30 + deltaTime)
+            logger.log("Safenow is \(r) with delta \(deltaTime)")
+            return r
         }
     }
     
@@ -338,12 +344,12 @@ public class RBS {
                     logger.log("accessTokenExpiresAt \(accessTokenExpiresAt)")
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt > now {
                         // Token can be used
-                        logger.log("DEBUG111 returning tokenData")
+                        logger.log("returning tokenData")
                         return tokenData
                     }
                     
                     if refreshTokenExpiresAt > now && accessTokenExpiresAt < now {
-                        logger.log("DEBUG111 refreshing token")
+                        logger.log("refreshing token")
                         // DO REFRESH
                         let refreshTokenRequest = RefreshTokenRequest()
                         refreshTokenRequest.refreshToken = refreshToken
@@ -359,7 +365,7 @@ public class RBS {
     }
     
     private func saveTokenData(tokenData: RBSTokenData?) {
-        logger.log("DEBUG111 saveTokenData called with tokenData")
+        logger.log("saveTokenData called with tokenData")
         var storedUserId: String? = nil
         // First get last stored token data from keychain.
         if let data = self.keychain.getData(RBSKeychainKey.token.keyName) {
@@ -372,7 +378,10 @@ public class RBS {
             }
         }
         
-        guard let tokenData = tokenData else {
+        var tokenDataWithDeltaTime = tokenData
+        tokenDataWithDeltaTime?.deltaTime = deltaTime
+        
+        guard let tokenData = tokenDataWithDeltaTime else {
             
             if storedUserId != nil {
                 DispatchQueue.main.async {
@@ -389,14 +398,14 @@ public class RBS {
         let data = try! JSONSerialization.data(withJSONObject: obj, options: .prettyPrinted)
         self.keychain.set(data, forKey: RBSKeychainKey.token.keyName)
         
-        logger.log("DEBUG111 saveTokenData 2")
+        logger.log("saveTokenData 2")
         
         if let accessToken = tokenData.accessToken {
             let jwt = try! decode(jwt: accessToken)
             if let userId = jwt.claim(name: "userId").string, let anonymous = jwt.claim(name: "anonymous").rawValue as? Bool {
                 
                 if userId != storedUserId {
-                    logger.log("DEBUG111 userId \(userId) - stored: \(storedUserId)")
+                    logger.log("userId \(userId) - stored: \(storedUserId ?? "")")
                     // User has changed.
                     let user = RBSUser(uid: userId, isAnonymous: anonymous)
                     
@@ -406,12 +415,12 @@ public class RBS {
                     
                     cloudObjects.removeAll()
                     
-                    logger.log("DEBUG111 initFirebaseApp 1")
+                    logger.log("initFirebaseApp 1")
                     if let app = self.firebaseApp, let customToken = tokenData.firebase?.customToken {
-                        self.logger.log("DEBUG111 FIREBASE custom auth \(userId)")
+                        self.logger.log("FIREBASE custom auth \(userId)")
                        
                         Auth.auth(app: app).signIn(withCustomToken: customToken) { [weak self] (resp, error)  in
-                            self?.logger.log("DEBUG111 FIREBASE custom auth COMPLETE user: \(resp?.user)")
+                            self?.logger.log("FIREBASE custom auth COMPLETE user: \(resp?.user)")
                             self?.firebaseAuthSemaphore.signal()
                         }
                         
@@ -444,7 +453,8 @@ public class RBS {
         self.service.request(.getAnonymToken(request: getAnonymTokenRequest)) { [weak self] result in
             switch result {
             case .success(let response):
-                retVal = try! response.map(RBSTokenData.self)
+                retVal = try? response.map(RBSTokenData.self)
+                self?.checkForDeltaTime(for: retVal?.accessToken)
                 break
             default:
                 break
@@ -468,14 +478,13 @@ public class RBS {
         let refreshTokenRequest = RefreshTokenRequest()
         refreshTokenRequest.refreshToken = tokenData.refreshToken
         
-        var retVal:RBSTokenData? = nil
+        var retVal: RBSTokenData? = nil
         
-        self.service.request(.refreshToken(request: refreshTokenRequest)) {
-            [weak self] result in
+        self.service.request(.refreshToken(request: refreshTokenRequest)) { [weak self] result in
             switch result {
             case .success(let response):
-                retVal = try! response.map(RBSTokenData.self)
-                break
+                retVal = try? response.map(RBSTokenData.self)
+                self?.checkForDeltaTime(for: retVal?.accessToken)
             default:
                 break
             }
@@ -490,6 +499,16 @@ public class RBS {
             return r
         }
         throw "Can't refresh token"
+    }
+    
+    private func checkForDeltaTime(for token: String?) {
+        guard let accessToken = token,
+              let jwt = try? decode(jwt: accessToken),
+              let serverTime = jwt.claim(name: "iat").integer else {
+                return
+        }
+        
+        deltaTime =  TimeInterval(serverTime) - Date().timeIntervalSince1970
     }
     
     private func executeAction(
@@ -700,13 +719,13 @@ public class RBS {
         logger.log("send called")
         
         serialQueue.async {
-            self.logger.log("DEBUG111 send called in async block")
+            self.logger.log("send called in async block")
             do {
                 
-                self.logger.log("DEBUG111 getTokenData called in send")
+                self.logger.log("getTokenData called in send")
                 let tokenData = try self.getTokenData()
                 
-                self.logger.log("DEBUG111 saveTokenData called in send")
+                self.logger.log("saveTokenData called in send")
                 self.saveTokenData(tokenData: tokenData)
                 
                 if actionName == "signInAnonym" {
@@ -726,7 +745,7 @@ public class RBS {
                         )
                         
                         DispatchQueue.main.async {
-                            self.logger.log("DEBUG111 send onSuccess")
+                            self.logger.log("send onSuccess")
                             onSuccess(actionResult)
                         }
                     } catch {
