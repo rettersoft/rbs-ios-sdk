@@ -13,8 +13,6 @@ import ObjectMapper
 
 var globalRbsRegion:RbsRegion = .euWest1
 
-let cloudObjectActions = ["rbs.core.request.INSTANCE", "rbs.core.request.CALL"]
-
 enum RBSService {
     
     case getAnonymToken(request: GetAnonymTokenRequest)
@@ -27,25 +25,7 @@ enum RBSService {
         switch self {
         case .getAnonymToken(_): return "/public/anonymous-auth"
         case .executeAction(let request):
-
-            let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
-            
-            if !isExcludedAction {
                 return "/user/action/\(request.projectId!)/\(request.actionName!)"
-            } else {
-                if request.actionName == "rbs.core.request.CALL" {
-                    return "CALL/\(request.classID ?? "")/\(request.method ?? "")/\(request.instanceID ?? "")"
-                }
-                
-                if let instanceID = request.instanceID {
-                    return "/INSTANCE/\(request.classID ?? "")/\(instanceID)"
-                } else if let keyValue = request.keyValue {
-                    return "/INSTANCE/\(request.classID ?? "")/\(keyValue.key)!\(keyValue.value)"
-                } else {
-                    return "/INSTANCE/\(request.classID ?? "")"
-                }
-                
-            }
         case .refreshToken(_): return "/public/auth-refresh"
         case .authWithCustomToken(_): return "/public/auth"
         }
@@ -79,21 +59,6 @@ enum RBSService {
         case .authWithCustomToken(let request): return ["customToken": request.customToken!, "platform": "IOS"]
             
         case .executeAction(let request):
-            
-            if cloudObjectActions.contains(request.actionName ?? "") {
-
-                var parameters: [String: Any] =  [
-                    "_token": request.accessToken != nil ? request.accessToken! : "",
-                ]
-                
-                if let queryParameters = request.queryString {
-                    for (key, value) in queryParameters {
-                        parameters[key] = value
-                    }
-                }
-                return parameters
-            }
-            
             if let action = request.actionName {
                
                 let accessToken = request.accessToken != nil ? request.accessToken! : ""
@@ -133,19 +98,11 @@ enum RBSService {
     var httpMethod: Moya.Method {
         switch self {
         case .executeAction(let request):
-
-            let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
-
-            if !isExcludedAction {
-                if(self.isGetAction(request.actionName)) {
-                    return .get
-                }
-                
-                return .post
-            } else {
-                return request.httpMethod ?? .post
+            if(self.isGetAction(request.actionName)) {
+                return .get
             }
             
+            return .post
         default: return .get
         }
     }
@@ -162,17 +119,10 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
     var baseURL: URL {
         switch self {
         case .executeAction(let request):
-            
-            let isExcludedAction = cloudObjectActions.contains(request.actionName ?? "")
-            
-            if !isExcludedAction {
-                if(self.isGetAction(request.actionName)) {
-                    return URL(string: globalRbsRegion.getUrl)!
-                }
-                return URL(string: globalRbsRegion.postUrl)!
-            } else {
-                return URL(string: "https://\(request.projectId!).\(globalRbsRegion.apiURL)")!
+            if(self.isGetAction(request.actionName)) {
+                return URL(string: globalRbsRegion.getUrl)!
             }
+            return URL(string: globalRbsRegion.postUrl)!
         default:
             return URL(string: globalRbsRegion.postUrl)!
         }

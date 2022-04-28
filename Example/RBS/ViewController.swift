@@ -12,19 +12,11 @@ import RBS
 class ViewController: UIViewController {
     
     let rbs = RBS(config: RBSConfig(projectId: "69ec1ef0039b4332b3e102f082a98ec2", region: .euWest1Beta))
-    
-    var cloudObject: RBSCloudObject?
-    
+        
     override func viewDidLoad() {
         super.viewDidLoad()
         rbs.delegate = self
     }
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-    
     
     @IBAction func testButtonTapped(_ sender: Any) {
         
@@ -37,89 +29,27 @@ class ViewController: UIViewController {
     }
     @IBAction func signoutTapped(_ sender: Any) {
         rbs.signOut()
-        cloudObject = nil
     }
     
     @IBAction func searchProducts(_ sender: Any) {
-        // MARK: - Get Cloud Object
-        let cloudOpts = RBSCloudObjectOptions(classID: "TestClass", instanceID: "01FQXSX0S23GQA59ZS45H66YGC", useLocal: true)
-//        let cloudOpts = RBSCloudObjectOptions(classID: "User", keyValue: ("username", "loodos2"))
-        
-        rbs.getCloudObject(with: cloudOpts) { [weak self] (newObject) in
-            print("--- Cloud Object Created ---")
-            self?.cloudObject = newObject
-        } onError: { (error) in
-            print(error)
-        }
-    }
-    
-    @IBAction func loginBusinessUser(_ sender: Any) {
-        guard let object = cloudObject else {
-            showCloudAlert()
-            return
-        }
-        
-        // MARK: - Get Objects States
-        
-        
-        
-        object.state?.user.subscribe { (data) in
-            print("---User State ->", data)
-        } onError: { (error) in
-            print("---User State Error ->", error)
-        }
-        
-        object.state?.role.subscribe { (data) in
-            print("---RoleState State ->", data)
-        } onError: { (error) in
-            print("---Role State Error ->", error)
-        }
-        
-        object.state?.public.subscribe { (data) in
-            print("---Public State ->", data)
-        } onError: { (error) in
-            print("---Public State Error ->", error)
-        }
-        
+        rbs.send(action: "rbs.catalog.get.SEARCH",
+                 data: ["searchTerm": "hardal"],
+                 headers: ["deneme": "baran"],
+                 onSuccess: { result in
+            print("SEARCH Result: \(result)")
+        }, onError: { error in
+            print("SEARCH Error Result: \(error)")
+        })
     }
     @IBAction func testAction(_ sender: Any) {
-        guard let object = cloudObject else {
-            showCloudAlert()
-            return
-        }
-        
-        // MARK: - Call Method
-        
-        object.call(
-            with: RBSCloudObjectOptions(method: "sayHello")
-        ) { (methodResponse) in
-            
-            let json = try? JSONSerialization.jsonObject(with: methodResponse.body!, options: [])
-            print(json)
-//
-//            object.call(with: RBSCloudObjectOptions(method: "updateProfile", body: ["username": "loodos2"])) { (responseX) in
-//                if let firstResponseX = responseX.first,
-//                   let dataX = firstResponseX as? Data {
-//                    let json = try? JSONSerialization.jsonObject(with: dataX, options: [])
-//                    print("---Update Response ->", json)
-//                }
-//            } onError: { (error) in
-//                print("---Method Error ->", error)
-//            }
-            
-        } onError: { (error) in
-            print("---Method Error ->", error)
-            
-//            let json = try? JSONSerialization.jsonObject(with: error.body!, options: [])
-//            print(json)
-        }
-    }
-    
-    private func showCloudAlert() {
-        let alert = UIAlertController(title: "Warning", message: "Please firstly get the cloud object.", preferredStyle: .alert)
-        let OKAction = UIAlertAction(title: "OK", style: .default)
-        alert.addAction(OKAction)
-        present(alert, animated: true)
+        rbs.send(action: "rbs.wms.request.GET_OPTION",
+                 data: ["optionId":"MAIN"],
+                 headers: nil,
+                 onSuccess: { result in
+            print("Result: \(result)")
+        }, onError: { error in
+            print("Error Result: \(error)")
+        })
     }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "RBS",
-  "version": "1.0.1",
+  "version": "1.1.6",
   "summary": "RBS iOS SDK.",
   "description": "TODO: Add long description of the pod here.",
   "homepage": "https://github.com/rettersoft/rbs-ios-sdk",
@@ -13,7 +13,7 @@
   },
   "source": {
     "git": "https://github.com/rettersoft/rbs-ios-sdk.git",
-    "tag": "1.0.1"
+    "tag": "1.1.6"
   },
   "platforms": {
     "ios": "11.0"
@@ -37,18 +37,6 @@
       "~> 2.4"
     ],
     "TrustKit": [
-
-    ],
-    "Firebase": [
-
-    ],
-    "Firebase/Firestore": [
-
-    ],
-    "FirebaseFirestoreSwift": [
-
-    ],
-    "Firebase/Auth": [
 
     ]
   }

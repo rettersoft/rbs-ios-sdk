@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RBS'
-  s.version          = '1.1.5'
+  s.version          = '1.1.6'
   s.summary          = 'RBS iOS SDK.'
 
 # This description is used to generate tags and improve search results.
@@ -50,8 +50,5 @@ TODO: Add long description of the pod here.
   s.dependency 'KeychainSwift', '~> 19.0'
   s.dependency 'JWTDecode', '~> 2.4'
   s.dependency 'TrustKit'
-  s.dependency 'Firebase', '~> 8.11.0'
-  s.dependency 'Firebase/Firestore', '~> 8.11.0'
-  s.dependency 'Firebase/Auth', '~> 8.11.0'
   
 end
