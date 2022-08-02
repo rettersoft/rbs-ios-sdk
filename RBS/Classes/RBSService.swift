@@ -176,6 +176,7 @@ extension RBSService: TargetType, AccessTokenAuthorizable {
             }
             
             headers["Content-Type"] = "application/json"
+            headers["x-rbs-token"] = request.accessToken ?? ""
             break
         default:
             break
