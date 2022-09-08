@@ -147,6 +147,17 @@ enum RBSKeychainKey {
     }
 }
 
+enum RBSUserDefaultsKey {
+    case openedFirstTime
+    
+    var keyName: String {
+        switch self {
+        case .openedFirstTime:
+            return "io.rtbs.openedFirstTime"
+        }
+    }
+}
+
 public enum RBSError: Error {
     case TokenError,
          cloudNotConfigured,
@@ -255,6 +266,11 @@ public class RBS {
         self.config = config
         self.projectId = config.projectId
         globalRbsRegion = config.region!
+        
+        if !UserDefaults.standard.bool(forKey: RBSUserDefaultsKey.openedFirstTime.keyName) {
+            keychain.delete(RBSKeychainKey.token.keyName)
+            UserDefaults.standard.set(true, forKey: RBSUserDefaultsKey.openedFirstTime.keyName)
+        }
     }
     
     private var safeNow: Date {

@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'RBS'
-  s.version          = '1.1.9'
+  s.version          = '1.2.0'
   s.summary          = 'RBS iOS SDK.'
 
 # This description is used to generate tags and improve search results.
