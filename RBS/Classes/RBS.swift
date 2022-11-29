@@ -267,10 +267,11 @@ public class RBS {
         self.projectId = config.projectId
         globalRbsRegion = config.region!
         
-        if !UserDefaults.standard.bool(forKey: RBSUserDefaultsKey.openedFirstTime.keyName) {
-            keychain.delete(RBSKeychainKey.token.keyName)
-            UserDefaults.standard.set(true, forKey: RBSUserDefaultsKey.openedFirstTime.keyName)
-        }
+        // not necessary
+//        if !UserDefaults.standard.bool(forKey: RBSUserDefaultsKey.openedFirstTime.keyName) {
+//            keychain.delete(RBSKeychainKey.token.keyName)
+//            UserDefaults.standard.set(true, forKey: RBSUserDefaultsKey.openedFirstTime.keyName)
+//        }
     }
     
     private var safeNow: Date {

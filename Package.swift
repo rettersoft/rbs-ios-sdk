@@ -15,19 +15,11 @@ let package = Package(
         .package(url: "https://github.com/tristanhimmelman/ObjectMapper.git", .upToNextMajor(from: "4.1.0")),
         .package(url: "https://github.com/datatheorem/TrustKit.git", .upToNextMajor(from: "1.6.5")),
         .package(name: "KeychainSwift", url: "https://github.com/evgenyneu/keychain-swift.git", .upToNextMajor(from: "19.0.0")),
-        .package(name: "JWTDecode", url: "https://github.com/auth0/JWTDecode.swift.git", .upToNextMajor(from: "2.6.0")),
-        .package(
-            name: "Firebase",
-            url: "https://github.com/firebase/firebase-ios-sdk.git",
-            .upToNextMajor(from: "8.11.0")
-          )
+        .package(name: "JWTDecode", url: "https://github.com/auth0/JWTDecode.swift.git", .upToNextMajor(from: "2.6.0"))
     ],
     targets: [
         .target(name: "RBS", dependencies: [
             "Moya", "Alamofire", "ObjectMapper", "KeychainSwift", "JWTDecode", "TrustKit",
-            .product(name: "FirebaseAuth", package: "Firebase"),
-            .product(name: "FirebaseFirestore", package: "Firebase")
-            
         ], path: "RBS/Classes")
     ]
 )
